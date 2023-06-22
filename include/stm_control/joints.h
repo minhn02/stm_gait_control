@@ -1,0 +1,12 @@
+#pragma once
+
+enum Joint {
+    LEFT_STEER,
+    RIGHT_STEER,
+    STEERING_JOINT,
+    BOGIE_JOINT,
+    FRONT_LEFT_WHEEL,
+    FRONT_RIGHT_WHEEL,
+    BACK_LEFT_WHEEL,
+    BACK_RIGHT_WHEEL,
+};
