@@ -22,7 +22,6 @@ set(FILES
     include/stm_control/gaits/transition_gait.hpp
     include/stm_control/gaits/wheelwalking_gait.hpp
     include/stm_control/joints.h
-    include/stm_control/bimap.hpp
     src/control/transition_generator.cpp
     src/control/wheel_controller.cpp
     src/gaits/idle_gait.cpp

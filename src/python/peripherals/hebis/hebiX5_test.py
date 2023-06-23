@@ -14,7 +14,7 @@ import math
 import sys
 import time
 
-from peripherals.hebis.config import HEBI_FAMILY_NAME, HEBI_FRONT_NAME, HEBI_REAR_NAME
+from peripherals.hebis.config import HEBI_FAMILY_NAME, HEBI_STEER_NAME, HEBI_BOGIE_NAME
 from peripherals.hebis.hebiX5 import Hebi, lookup_hebis
 
 DEFAULT_POS_GOAL_DEG = 0
@@ -72,14 +72,14 @@ def test_double_trajectory(front_module: Hebi, rear_module: Hebi, pos_goal_deg: 
 
 
 if __name__ == "__main__":
-    pitch_motor_front = Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_FRONT_NAME)
-    pitch_motor_rear = Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_REAR_NAME)
+    steering_motor = Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_NAME)
+    bogie_motor = Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
 
     duration_s = 5
     control_period_s = 0.02
 
-    front_fbk = pitch_motor_front.get_feedback()
-    rear_fbk = pitch_motor_rear.get_feedback()
+    front_fbk = steering_motor.get_feedback()
+    rear_fbk = bogie_motor.get_feedback()
 
     front_pos = front_fbk.position[0]
     rear_pos = rear_fbk.position[0]
@@ -91,15 +91,15 @@ if __name__ == "__main__":
         pos_goal_deg = DEFAULT_POS_GOAL_DEG
 
     print("Test Trajectory")
-    # test_trajectory(pitch_motor_front, pos_goal_deg)
+    # test_trajectory(steering_motor, pos_goal_deg)
 
-    test_double_trajectory(pitch_motor_front, pitch_motor_rear, pos_goal_deg)
+    test_double_trajectory(steering_motor, bogie_motor, pos_goal_deg)
 
     # t_start = time.time()
     # while time.time() < t_start + duration_s:
     #     t_start_loop_ns = time.time_ns()
-    #     pitch_motor_front.cmd_position(math.pi / 2, 1)
-    #     pitch_motor_rear.cmd_position(math.pi / 2, 1)
+    #     steering_motor.cmd_position(math.pi / 2, 1)
+    #     bogie_motor.cmd_position(math.pi / 2, 1)
     #     elapsed_time_s = (time.time_ns() - t_start_loop_ns) * 0.000000001
     #     time.sleep(max(0, control_period_s - elapsed_time_s))
 
@@ -108,8 +108,8 @@ if __name__ == "__main__":
     # t_start = time.time()
     # while time.time() < t_start + duration_s:
     #     t_start_loop_ns = time.time_ns()
-    #     pitch_motor_front.cmd_position(0, 1)
-    #     pitch_motor_rear.cmd_position(0, 1)
+    #     steering_motor.cmd_position(0, 1)
+    #     bogie_motor.cmd_position(0, 1)
     #     elapsed_time_s = (time.time_ns() - t_start_loop_ns) * 0.000000001
     #     time.sleep(max(0, control_period_s - elapsed_time_s))
 

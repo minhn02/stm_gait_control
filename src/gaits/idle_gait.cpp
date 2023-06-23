@@ -26,7 +26,9 @@ std::map<Joint, double> IdleGait::run(std::chrono::nanoseconds time, std::chrono
 
     // evaluate positions
     Eigen::VectorXd positions = evaluate(gaitTime);
+    Eigen::VectorXd velocities = derivative(gaitTime);
 
-    std::map<Joint, double> publishMap = {{Joint::STEERING_JOINT, positions(0)}, {Joint::BOGIE_JOINT, positions(1)}};
+    std::map<Joint, double> publishMap = {{Joint::STEERING_JOINT, positions(0)}, {Joint::BOGIE_JOINT, positions(1)},
+                                          {Joint::STEERING_JOINT_VEL, velocities(0)}, {Joint::BOGIE_JOINT_VEL, velocities(1)}};
     return publishMap;
 }

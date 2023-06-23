@@ -4,7 +4,7 @@
 
 class SquirmingGait : public Gait::Gait {
 public:
-    SquirmingGait(double amplitude = 0.3, long period = 3e9);
+    SquirmingGait(double amplitude = 0.69, long period = 8e9);
 
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 

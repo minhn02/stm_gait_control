@@ -37,6 +37,7 @@ std::map<Joint, double> WheelWalkingGait::run(std::chrono::nanoseconds time, std
     std::vector<double> wheelSpeeds = WheelController::calculateWheelSpeeds(100, positions(0), velocities(0));    
 
     std::map<Joint, double> publishMap = {{Joint::STEERING_JOINT, positions(0)}, {Joint::BOGIE_JOINT, positions(1)},
+                                          {Joint::STEERING_JOINT_VEL, velocities(0)}, {Joint::BOGIE_JOINT_VEL, velocities(1)},
                                           {Joint::FRONT_LEFT_WHEEL, wheelSpeeds[0]}, {Joint::FRONT_RIGHT_WHEEL, wheelSpeeds[1]},
                                           {Joint::BACK_LEFT_WHEEL, wheelSpeeds[2]}, {Joint::BACK_RIGHT_WHEEL, wheelSpeeds[3]}};
     return publishMap;

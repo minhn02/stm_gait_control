@@ -69,6 +69,8 @@ namespace StateMachine {
 PYBIND11_MODULE(stm_state_machine, m) {
     py::enum_<Joint>(m, "Joint")
         .value("STEERING_JOINT", Joint::STEERING_JOINT)
+        .value("STEERING_JOINT_VEL", Joint::STEERING_JOINT_VEL)
+        .value("BOGIE_JOINT_VEL", Joint::BOGIE_JOINT_VEL)
         .value("BOGIE_JOINT", Joint::BOGIE_JOINT)
         .value("FRONT_LEFT_WHEEL", Joint::FRONT_LEFT_WHEEL)
         .value("FRONT_RIGHT_WHEEL", Joint::FRONT_RIGHT_WHEEL)
