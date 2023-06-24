@@ -29,6 +29,8 @@ std::map<Joint, double> IdleGait::run(std::chrono::nanoseconds time, std::chrono
     Eigen::VectorXd velocities = derivative(gaitTime);
 
     std::map<Joint, double> publishMap = {{Joint::STEERING_JOINT, positions(0)}, {Joint::BOGIE_JOINT, positions(1)},
-                                          {Joint::STEERING_JOINT_VEL, velocities(0)}, {Joint::BOGIE_JOINT_VEL, velocities(1)}};
+                                          {Joint::STEERING_JOINT_VEL, velocities(0)}, {Joint::BOGIE_JOINT_VEL, velocities(1)},
+                                          {Joint::FRONT_LEFT_WHEEL, 0.0}, {Joint::FRONT_RIGHT_WHEEL, 0.0},
+                                          {Joint::BACK_LEFT_WHEEL, 0.0}, {Joint::BACK_RIGHT_WHEEL, 0.0}};
     return publishMap;
 }

@@ -7,7 +7,7 @@ class TransitionGait : public Gait::Gait {
 public:
 
     TransitionGait();
-    TransitionGait(Bezier::Curve<long> curve);
+    TransitionGait(Bezier::Curve<int64_t> curve);
 
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 
@@ -40,7 +40,7 @@ public:
     }
 
     private:
-    Bezier::Curve<long> curve_;
+    Bezier::Curve<int64_t> curve_;
     std::chrono::nanoseconds startTime_;
-    long period_ = (long)100e9;
+    int64_t period_ = (int64_t)100e9;
 };

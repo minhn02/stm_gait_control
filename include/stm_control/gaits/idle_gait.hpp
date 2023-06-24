@@ -34,5 +34,5 @@ public:
     }
 
     private:
-    long period_ = 0;
+    int64_t period_ = 0;
 };

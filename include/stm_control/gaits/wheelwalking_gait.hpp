@@ -5,7 +5,7 @@
 class WheelWalkingGait : public Gait::Gait {
 
     public:
-    WheelWalkingGait(double steeringAmplitude = 0.69, double bogieAmplitude = 0.43, long period = 10e9);
+    WheelWalkingGait(double steeringAmplitude = 0.69, double bogieAmplitude = 0.43, int64_t period = 10000000000);
 
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 
@@ -39,5 +39,5 @@ class WheelWalkingGait : public Gait::Gait {
     private:
     double steeringAmplitude_;
     double bogieAmplitude_;
-    long period_;
+    int64_t period_;
 };

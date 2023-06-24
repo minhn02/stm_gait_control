@@ -1,10 +1,10 @@
 #include "stm_control/gaits/transition_gait.hpp"
 
 TransitionGait::TransitionGait() {
-    curve_ = Bezier::Curve<long>();
+    curve_ = Bezier::Curve<int64_t>();
 }
 
-TransitionGait::TransitionGait(Bezier::Curve<long> curve) {
+TransitionGait::TransitionGait(Bezier::Curve<int64_t> curve) {
     curve_ = curve;
     startTime_ = std::chrono::nanoseconds(curve.getT0());
     period_ = curve.getT();

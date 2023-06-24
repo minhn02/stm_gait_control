@@ -8,12 +8,12 @@ namespace TransitionGenerator {
     struct OptData {
         Gait::Gait *gait1;
         Gait::Gait *gait2;
-        long t1;
-        long startTime;
+        int64_t t1;
+        int64_t startTime;
     };
 
     TransitionGait generate(Gait::Gait *gait1, Gait::Gait *gait2, std::chrono::nanoseconds startTime, std::chrono::nanoseconds t1, std::chrono::nanoseconds *t_t, std::chrono::nanoseconds *t_2) {
-        Bezier::Curve<long> curve = findOptimalCubicCurve(gait1, gait2, startTime, t1, t_t, t_2);
+        Bezier::Curve<int64_t> curve = findOptimalCubicCurve(gait1, gait2, startTime, t1, t_t, t_2);
     //  //TODO seperate start time from constructor
         return TransitionGait(curve);
     }
@@ -22,12 +22,12 @@ namespace TransitionGenerator {
         OptData *data = (OptData*)f_data;
         Gait::Gait *g1 = data->gait1;
         Gait::Gait *g2 = data->gait2;
-        long t1 = data->t1;
-        long startTime = data->startTime;
-        long duration = (long)(x[0]) - t1;
+        int64_t t1 = data->t1;
+        int64_t startTime = data->startTime;
+        int64_t duration = (int64_t)(x[0]) - t1;
         std::chrono::nanoseconds startTime_ns(startTime);
         std::chrono::nanoseconds t1_ns(t1);
-        std::chrono::nanoseconds t2_ns((long)x[1]);
+        std::chrono::nanoseconds t2_ns((int64_t)x[1]);
 
         // x is vector {t_t, t_2}
         VectorXd P0 = g1->evaluate(t1_ns - startTime_ns);
@@ -36,9 +36,9 @@ namespace TransitionGenerator {
         VectorXd P2 = P3 - ((double)duration/3)*g2->derivative(t2_ns);
 
         std::vector<VectorXd> points = {P0, P1, P2, P3};
-        Bezier::Curve<long> curve(points, (long)(x[0]) - t1, t1);
+        Bezier::Curve<int64_t> curve(points, (int64_t)(x[0]) - t1, t1);
 
-        double avgVel = (1/(double)((long)x[0] - t1)) * (curve.dEvaluate(t1) - curve.dEvaluate((long)x[0])).norm();
+        double avgVel = (1/(double)((int64_t)x[0] - t1)) * (curve.dEvaluate(t1) - curve.dEvaluate((int64_t)x[0])).norm();
         double duration_cost = (double)duration/1e9;
 
         avgVel = avgVel * 1e17;
@@ -47,7 +47,7 @@ namespace TransitionGenerator {
         return avgVel + duration_cost;
     }
 
-    Bezier::Curve<long> findOptimalCubicCurve(Gait::Gait *gait1, Gait::Gait *gait2, std::chrono::nanoseconds startTime, std::chrono::nanoseconds t1, std::chrono::nanoseconds *t_t, std::chrono::nanoseconds *t_2) {
+    Bezier::Curve<int64_t> findOptimalCubicCurve(Gait::Gait *gait1, Gait::Gait *gait2, std::chrono::nanoseconds startTime, std::chrono::nanoseconds t1, std::chrono::nanoseconds *t_t, std::chrono::nanoseconds *t_2) {
         double t1_d = (double) t1.count();
         double period_d = (double) gait2->getPeriod().count();
 
@@ -82,9 +82,9 @@ namespace TransitionGenerator {
             std::printf("Optimized Vector {%f, %f}, with objective value %f \n", guess[0], guess[1], obj_value);
         }
 
-        std::chrono::nanoseconds tt((long)guess[0]);
-        std::chrono::nanoseconds t2((long)guess[1]);
-        long duration = (long)(guess[0]) - t1.count();
+        std::chrono::nanoseconds tt((int64_t)guess[0]);
+        std::chrono::nanoseconds t2((int64_t)guess[1]);
+        int64_t duration = (int64_t)(guess[0]) - t1.count();
 
         *t_t = tt;
         *t_2 = t2;
@@ -99,7 +99,7 @@ namespace TransitionGenerator {
         << P1(0) << ", " << P1(1) << "}, {"
         << P2(0) << ", " << P2(1) << "}, {"
         << P3(0) << ", " << P3(1) << "}, "
-        << "T: " << (long)(guess[0]) - t1.count() << ", t0: " << t1.count() << std::endl;
-        return Bezier::Curve<long>({P0, P1, P2, P3}, duration, t1.count());
+        << "T: " << (int64_t)(guess[0]) - t1.count() << ", t0: " << t1.count() << std::endl;
+        return Bezier::Curve<int64_t>({P0, P1, P2, P3}, duration, t1.count());
     }
 }

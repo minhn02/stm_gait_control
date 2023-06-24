@@ -20,23 +20,25 @@ wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization 
 
 def control_loop():
     global state_machine
-    
-    start_time = time.time_ns()    
 
-    # execute state machine
-    commands = state_machine.execute(timedelta(microseconds=time.time_ns()//1000), {})
+    while True:
+        start_time = time.time_ns()    
 
-    # send commands to rover
-    steering_motor.cmd_position(commands[stm_state_machine.Joint.STEERING_JOINT], commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
-    bogie_motor.cmd_position(commands[stm_state_machine.Joint.BOGIE_JOINT], commands[stm_state_machine.Joint.BOGIE_JOINT_VEL])
+        # execute state machine
+        commands = state_machine.execute(timedelta(microseconds=time.time_ns()//1000), {})
 
-    wheelSpeeds = [commands[stm_state_machine.Joint.LEFT_FRONT_WHEEL], commands[stm_state_machine.Joint.RIGHT_FRONT_WHEEL],
-                   commands[stm_state_machine.Joint.LEFT_REAR_WHEEL], commands[stm_state_machine.Joint.RIGHT_REAR_WHEEL]]
-    wheels.set_speeds(wheelSpeeds)
+        # send commands to rover
+        steering_motor.cmd_position(commands[stm_state_machine.Joint.STEERING_JOINT], commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
+        bogie_motor.cmd_position(commands[stm_state_machine.Joint.BOGIE_JOINT], commands[stm_state_machine.Joint.BOGIE_JOINT_VEL])
 
-    # wait for next control period
-    end_time = time.time_ns()
-    time.sleep(max(0, control_period - (end_time - start_time)/1e9))
+        wheelSpeeds = [commands[stm_state_machine.Joint.FRONT_LEFT_WHEEL], commands[stm_state_machine.Joint.FRONT_RIGHT_WHEEL],
+                    commands[stm_state_machine.Joint.BACK_LEFT_WHEEL], commands[stm_state_machine.Joint.BACK_RIGHT_WHEEL]]
+        print("setting wheel speeds: ", wheelSpeeds)
+        wheels.set_speeds(wheelSpeeds)
+
+        # wait for next control period
+        end_time = time.time_ns()
+        time.sleep(max(0, control_period - (end_time - start_time)/1e9))
 
 
 #intialize keyboard control

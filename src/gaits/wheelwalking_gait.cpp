@@ -1,6 +1,6 @@
 #include "stm_control/gaits/wheelwalking_gait.hpp"
 
-WheelWalkingGait::WheelWalkingGait(double steeringAmplitude, double bogieAmplitude, long period){
+WheelWalkingGait::WheelWalkingGait(double steeringAmplitude, double bogieAmplitude, int64_t period){
     steeringAmplitude_ = steeringAmplitude;
     bogieAmplitude_ = bogieAmplitude;
     period_ = period;

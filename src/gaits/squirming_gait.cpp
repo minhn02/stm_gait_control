@@ -1,6 +1,6 @@
 #include "stm_control/gaits/squirming_gait.hpp"
 
-SquirmingGait::SquirmingGait(double amplitude, long period) {
+SquirmingGait::SquirmingGait(double amplitude, int64_t period) {
     amplitude_ = amplitude;
     period_ = period;
 }

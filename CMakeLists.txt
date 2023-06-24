@@ -3,9 +3,9 @@ project(stm_control)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include /usr/local/include)
 
-find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(Bezier REQUIRED)
 
 add_library(nlopt SHARED IMPORTED)
