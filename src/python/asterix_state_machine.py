@@ -6,8 +6,12 @@ import peripherals.hebis.hebiX5 as hebi
 from peripherals.wheels.wheel_control import WheelControl
 import curses
 import threading
+from telem.record_telemetry import *
 
+DEG_TO_RAD = 3.1415/180.0
 control_period = 0.02 #seconds
+steering_limit = 40*DEG_TO_RAD
+bogie_limit = 15*DEG_TO_RAD
 
 #initialize state machine with current time in nanoseconds (have to convert to microseconds for timedelta support)
 state_machine = stm_state_machine.StateMachine(timedelta(microseconds=time.time_ns()//1000))
@@ -15,14 +19,17 @@ state_machine = stm_state_machine.StateMachine(timedelta(microseconds=time.time_
 #initialize motors
 steering_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_NAME)
 bogie_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
-wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization taken from Arthur's code
+wheels = WheelControl([1, 2, 3, 4], [True, False, True, False]) #initialization taken from Arthur's code
 
+filename = "test.csv"
+setup_log_file(filename)
 
 def control_loop():
-    global state_machine
-
     while True:
-        start_time = time.time_ns()    
+        start_time = time.time_ns()
+
+        # log telem
+        write_telemetry(filename, start_time, steering_motor, bogie_motor, wheels)
 
         # execute state machine
         commands = state_machine.execute(timedelta(microseconds=time.time_ns()//1000), {})
@@ -33,7 +40,6 @@ def control_loop():
 
         wheelSpeeds = [commands[stm_state_machine.Joint.FRONT_LEFT_WHEEL], commands[stm_state_machine.Joint.FRONT_RIGHT_WHEEL],
                     commands[stm_state_machine.Joint.BACK_LEFT_WHEEL], commands[stm_state_machine.Joint.BACK_RIGHT_WHEEL]]
-        print("setting wheel speeds: ", wheelSpeeds)
         wheels.set_speeds(wheelSpeeds)
 
         # wait for next control period

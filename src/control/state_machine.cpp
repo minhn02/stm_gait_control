@@ -17,9 +17,13 @@ namespace StateMachine {
         currState_ = &idleGait;
         prevState_ = &idleGait;
         transitionStarted_ = false;
+        transitionsEnabled_ = true;
     }
 
     void StateMachine::switchState(uint8_t nextState, std::chrono::nanoseconds currTime) {
+        if (nextState == 4) {
+            transitionsEnabled_ = !transitionsEnabled;
+        }
         if (!transitionStarted_) {
             if (nextState == 0) {
                 currState_ = &idleGait;
@@ -35,7 +39,7 @@ namespace StateMachine {
         std::map<Joint, double> jointCommands;
         
         // handle state transition
-        if (currState_ != prevState_ && prevState_ != &idleGait) {
+        if (currState_ != prevState_ && prevState_ != &idleGait && transitionsEnabled_) {
             // std::cout << "in state transition: " << "transition started: " << transitionStarted_ << " currState: " << currState_ << " prevState: " << prevState_ << std::endl;
             if (transitionStarted_) {
                 // std::cout << "transition started, running transition" << std::endl;

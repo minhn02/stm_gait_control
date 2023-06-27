@@ -39,7 +39,8 @@ class StateMachine {
     std::chrono::nanoseconds startTime_;
     bool transitionStarted_;
     std::chrono::nanoseconds t2_;
-    std::chrono::nanoseconds tt_    ;
+    std::chrono::nanoseconds tt_;
+    bool transitionsEnabled_;
 };
 
 
