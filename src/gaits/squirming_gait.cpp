@@ -33,7 +33,7 @@ std::map<Joint, double> SquirmingGait::run(std::chrono::nanoseconds time, std::c
     Eigen::VectorXd velocities = derivative(gaitTime);
 
     // calculate wheel speeds
-    std::vector<double> wheelSpeeds = WheelController::calculateWheelSpeeds(100, positions(0), velocities(0));    
+    std::vector<double> wheelSpeeds = WheelController::calculateWheelSpeeds(positions(0), velocities(0));    
 
     std::map<Joint, double> publishMap = {{Joint::STEERING_JOINT, positions(0)}, {Joint::BOGIE_JOINT, positions(1)},
                                           {Joint::STEERING_JOINT_VEL, velocities(0)}, {Joint::BOGIE_JOINT_VEL, velocities(1)},

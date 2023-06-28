@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
-log_dir_path = Path(f"/home/asterix/minh/logs/{datetime.now().strftime('%Y%m%d')}")
+log_dir_path = Path(f"/home/pi/minh/logs/{datetime.now().strftime('%Y%m%d')}")
 
 def setup_log_file(filename):
         log_dir_path.mkdir(parents=True, exist_ok=True)
@@ -50,10 +50,10 @@ def write_telemetry(filename, t, steering_motor, bogie_motor, wheels):
             log_row.extend(
                 [
                     f"{wheels.get_telemetry()[i]['velocity']}",
-                    f"{wheels.get_telemetry()['current']}",
-                    f"{wheels.get_telemetry()['voltage']}",
-                    f"{wheels.get_telemetry()['position']}",
-                    f"{wheels.get_telemetry()['temperature']}",
+                    f"{wheels.get_telemetry()[i]['current']}",
+                    f"{wheels.get_telemetry()[i]['voltage']}",
+                    f"{wheels.get_telemetry()[i]['position']}",
+                    f"{wheels.get_telemetry()[i]['temperature']}",
                 ]
             )
 

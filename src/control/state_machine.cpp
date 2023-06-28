@@ -22,7 +22,7 @@ namespace StateMachine {
 
     void StateMachine::switchState(uint8_t nextState, std::chrono::nanoseconds currTime) {
         if (nextState == 4) {
-            transitionsEnabled_ = !transitionsEnabled;
+            transitionsEnabled_ = !transitionsEnabled_;
         }
         if (!transitionStarted_) {
             if (nextState == 0) {

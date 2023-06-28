@@ -19,7 +19,7 @@ state_machine = stm_state_machine.StateMachine(timedelta(microseconds=time.time_
 #initialize motors
 steering_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_NAME)
 bogie_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
-wheels = WheelControl([1, 2, 3, 4], [True, False, True, False]) #initialization taken from Arthur's code
+wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization taken from Arthur's code
 
 filename = "test.csv"
 setup_log_file(filename)
