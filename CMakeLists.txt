@@ -17,14 +17,19 @@ set(FILES
     include/stm_control/control/transition_generator.hpp
     include/stm_control/control/wheel_controller.hpp
     include/stm_control/gaits/gait.hpp
+    include/stm_control/gaits/command_position_gait.hpp
+    include/stm_control/gaits/initial_gait.hpp
     include/stm_control/gaits/idle_gait.hpp
     include/stm_control/gaits/squirming_gait.hpp
     include/stm_control/gaits/transition_gait.hpp
     include/stm_control/gaits/wheelwalking_gait.hpp
     include/stm_control/joints.h
+    include/stm_control/trapezoidal_traj.h
     src/control/transition_generator.cpp
     src/control/wheel_controller.cpp
     src/gaits/idle_gait.cpp
+    src/gaits/command_position_gait.cpp
+    src/gaits/initial_gait.cpp
     src/gaits/squirming_gait.cpp
     src/gaits/transition_gait.cpp
     src/gaits/wheelwalking_gait.cpp)

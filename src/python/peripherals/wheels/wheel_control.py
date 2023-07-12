@@ -51,6 +51,8 @@ class WheelControl:
     len_present_voltage = 2
     addr_present_temperature = 146
     len_present_temperature = 1
+    addr_present_pwm = 124
+    len_present_pwm = 2
 
     addr_telemetry_block = 126
     len_telemetry_block = 21
@@ -305,6 +307,11 @@ class WheelControl:
                 WheelControl.addr_present_temperature,
                 WheelControl.len_present_temperature,
             )
+            pwm = self._groupSyncRead.getData(
+                motor_id,
+                WheelControl.addr_present_pwm,
+                WheelControl.len_present_pwm,
+            )
 
             # Compute the two's complements to obtain signed values:
             if current > 32768:
@@ -315,6 +322,8 @@ class WheelControl:
                 position -= 4294967296
             if temperature > 128:
                 temperature -= 256
+            if pwm > 32768:
+                pwm -= 65536
 
             # Convert the values to the desired units:
             current *= 2.69  # mA
@@ -330,6 +339,7 @@ class WheelControl:
                     "current": motor_direction * current,
                     "voltage": voltage,
                     "temperature": temperature,
+                    "pwm": pwm,
                 }
             )
 

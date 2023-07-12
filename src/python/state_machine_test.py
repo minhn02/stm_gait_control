@@ -16,8 +16,10 @@ while True:
     commands = state_machine.execute(timedelta(microseconds=time.time_ns()//1000), {})
     
     # send commands to rover
-    print(commands)
+    # print(commands)
 
     # wait for next control period
     end_time = time.time_ns()
+    print("loop rate: ", 1/((end_time - start_time)/1e9))
+
     time.sleep(max(0, control_period - (end_time - start_time)/1e9))

@@ -4,6 +4,8 @@
 #include "stm_control/gaits/squirming_gait.hpp"
 #include "stm_control/gaits/transition_gait.hpp"
 #include "stm_control/gaits/wheelwalking_gait.hpp"
+#include "stm_control/gaits/command_position_gait.hpp"
+#include "stm_control/gaits/initial_gait.hpp"
 
 namespace StateMachine {
 
@@ -11,19 +13,20 @@ namespace StateMachine {
     IdleGait idleGait = IdleGait();
     TransitionGait transition = TransitionGait();
     WheelWalkingGait wheelWalkingGait = WheelWalkingGait();
+    CommandPositionGait commandPositionGait = CommandPositionGait();
+    InitialGait initialGait = InitialGait();
 
     StateMachine::StateMachine(std::chrono::nanoseconds startTime) {
         startTime_ = startTime;
-        currState_ = &idleGait;
-        prevState_ = &idleGait;
+        currState_ = &initialGait;
+        prevState_ = &initialGait;
         transitionStarted_ = false;
-        transitionsEnabled_ = true;
+        transitionType_ = TransitionType::NAIVE;
+        inStartup_ = true;
+        madeCommandGait_ = false;
     }
 
     void StateMachine::switchState(uint8_t nextState, std::chrono::nanoseconds currTime) {
-        if (nextState == 4) {
-            transitionsEnabled_ = !transitionsEnabled_;
-        }
         if (!transitionStarted_) {
             if (nextState == 0) {
                 currState_ = &idleGait;
@@ -31,6 +34,14 @@ namespace StateMachine {
                 currState_ = &squirmingGait;
             } else if (nextState == 2) {
                 currState_ = &wheelWalkingGait;
+            } else if (nextState == 3) {
+                transitionType_ = TransitionType::NAIVE;
+            } else if (nextState == 4) {
+                transitionType_ = TransitionType::BEZIER;
+            } else if (nextState == 5) {
+                transitionType_ = TransitionType::LINEAR_WAYPOINT;
+            } else if (nextState == 6) {
+                transitionType_ = TransitionType::BEZIER_WAYPOINT;
             }
         }
     }
@@ -39,7 +50,7 @@ namespace StateMachine {
         std::map<Joint, double> jointCommands;
         
         // handle state transition
-        if (currState_ != prevState_ && prevState_ != &idleGait && transitionsEnabled_) {
+        if (currState_ != prevState_ && prevState_ != &idleGait && !inStartup_) {
             // std::cout << "in state transition: " << "transition started: " << transitionStarted_ << " currState: " << currState_ << " prevState: " << prevState_ << std::endl;
             if (transitionStarted_) {
                 // std::cout << "transition started, running transition" << std::endl;
@@ -54,14 +65,30 @@ namespace StateMachine {
                     return currState_->run(time, startTime_, currPositions);
                 }
             } else {
-                transition = TransitionGenerator::generate(prevState_, currState_, startTime_, time, &tt_, &t2_);
+                transition = TransitionGenerator::generate(transitionType_, prevState_, currState_, startTime_, time, &tt_, &t2_);
                 std::cout << "Generated transition: t_t: " << tt_.count() << " t_2: " << t2_.count() << std::endl;
                 transitionStarted_ = true;
                 startTime_ = time;
                 return transition.run(time, startTime_, currPositions);
             }
         } else {
-            if (prevState_ == &idleGait) {
+            if (inStartup_) {
+                // move to idle gait
+                if (!madeCommandGait_) {
+                    startTime_ = time;
+                    commandPositionGait = CommandPositionGait(time.count(), currPositions[Joint::STEERING_JOINT], currPositions[Joint::BOGIE_JOINT], -40 * (M_PI / 180.0), 0);
+                    currState_ = &commandPositionGait;
+                    madeCommandGait_ = true;
+                }
+
+                if (commandPositionGait.isFinished(time)) {
+                    std::cout << "finished startup" << std::endl;
+                    prevState_ = &idleGait;
+                    currState_ = &idleGait;
+                    startTime_ = time;
+                    inStartup_ = false;
+                }
+            } else if (prevState_ == &idleGait) {
                 startTime_ = time;
                 prevState_ = currState_;
             }
@@ -79,7 +106,8 @@ PYBIND11_MODULE(stm_state_machine, m) {
         .value("FRONT_LEFT_WHEEL", Joint::FRONT_LEFT_WHEEL)
         .value("FRONT_RIGHT_WHEEL", Joint::FRONT_RIGHT_WHEEL)
         .value("BACK_LEFT_WHEEL", Joint::BACK_LEFT_WHEEL)
-        .value("BACK_RIGHT_WHEEL", Joint::BACK_RIGHT_WHEEL);
+        .value("BACK_RIGHT_WHEEL", Joint::BACK_RIGHT_WHEEL)
+        .value("TRANSITIONING", Joint::TRANSITIONING);
 
     py::class_<StateMachine::StateMachine>(m, "StateMachine")
         .def(py::init<std::chrono::nanoseconds>())

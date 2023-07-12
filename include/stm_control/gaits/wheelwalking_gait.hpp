@@ -1,11 +1,12 @@
 #pragma once
 
 #include "stm_control/gaits/gait.hpp"
+#include "stm_control/trapezoidal_traj.h"
 
 class WheelWalkingGait : public Gait::Gait {
 
     public:
-    WheelWalkingGait(double steeringAmplitude = 0.34, double bogieAmplitude = 0.21, int64_t period = 10000000000);
+    WheelWalkingGait();
 
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 
@@ -37,7 +38,19 @@ class WheelWalkingGait : public Gait::Gait {
     }
 
     private:
-    double steeringAmplitude_;
-    double bogieAmplitude_;
     int64_t period_;
+
+    int64_t steerTransientDuration_;
+    double steeringLimit_;
+    double steering_velocity_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> forwardSteerTraj_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> backwardSteerTraj_;
+
+    int64_t bogieTransientDuration_;
+    double bogieLimit_;
+    double bogie_velocity_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> forwardtoZeroBogieTraj_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> zeroToForwardBogieTraj_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> backwardtoZeroBogieTraj_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> zerotoBackwardBogieTraj_;
 };

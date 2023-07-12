@@ -1,24 +1,13 @@
 #pragma once
 
 #include "stm_control/gaits/gait.hpp"
-#include "bezier.h"
 #include "stm_control/trapezoidal_traj.h"
-#include "algorithm"
 
-enum TransitionType {
-    NAIVE,
-    LINEAR_WAYPOINT,
-    BEZIER_WAYPOINT,
-    BEZIER,
-};
-
-class TransitionGait : public Gait::Gait {
+class CommandPositionGait : public Gait::Gait {
 public:
+    CommandPositionGait();
 
-    TransitionGait();
-    TransitionGait(Bezier::Curve<int64_t> curve);
-    TransitionGait(Bezier::Spline<int64_t> spline);
-    TransitionGait(std::vector<TrapezoidalTrajectory::TrapTraj<int64_t>> trapTrajectories);
+    CommandPositionGait(int64_t t0, double currSteering, double currBogie, double desiredSteering, double desiredBogie);
 
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 
@@ -45,16 +34,20 @@ public:
      */
     std::map<Joint, double> run(std::chrono::nanoseconds time, std::chrono::nanoseconds startTime, std::map<Joint, double> jointStates);
 
-
     std::chrono::nanoseconds getPeriod() {
         return std::chrono::nanoseconds(period_);
     }
 
     private:
-    TransitionType type_;
-    Bezier::Curve<int64_t> curve_;
-    Bezier::Spline<int64_t> spline_;
-    std::vector<TrapezoidalTrajectory::TrapTraj<int64_t>> trapTrajectories_;
-    std::chrono::nanoseconds startTime_;
-    int64_t period_;
+    int64_t period_ = 0;
+    TrapezoidalTrajectory::TrapTraj<int64_t> steeringTraj_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> bogieTraj_;
+
+    int64_t steerTransientDuration_;
+    double steering_velocity_;
+
+    int64_t bogieTransientDuration_;
+    double bogie_velocity_;
+
+    bool isFinished_;
 };

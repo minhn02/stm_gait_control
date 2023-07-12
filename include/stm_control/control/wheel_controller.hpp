@@ -9,7 +9,7 @@ namespace WheelController {
     const double LX = 200;
     const double LY = 200;
     const double WHEEL_RADIUS = 100;
-    const double MAX_WHEEL_SPEED = 53; //TODO get accurate value
+    const double MAX_WHEEL_SPEED = 5.51;
 
     /**
      * @brief Calculates the wheel speeds for a given steering angle and velocity to drive straight

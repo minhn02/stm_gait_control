@@ -1,10 +1,11 @@
 #pragma once
 
 #include "stm_control/gaits/gait.hpp"
+#include "stm_control/trapezoidal_traj.h"
 
 class SquirmingGait : public Gait::Gait {
 public:
-    SquirmingGait(double amplitude = 0.34, int64_t period = 8000000000);
+    SquirmingGait();
 
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 
@@ -36,6 +37,12 @@ public:
     }
 
     private:
-    double amplitude_;
+    bool started_ = false;
+    TrapezoidalTrajectory::TrapTraj<int64_t> forwardTraj_;
+    TrapezoidalTrajectory::TrapTraj<int64_t> backwardTraj_;
     int64_t period_;
+    int64_t transientDuration_;
+    double steeringLimit_;
+    double steering_velocity_;
+    double steering_goal_;
 };

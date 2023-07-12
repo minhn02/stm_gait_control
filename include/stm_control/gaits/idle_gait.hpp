@@ -35,4 +35,5 @@ public:
 
     private:
     int64_t period_ = 0;
+    double steeringLimit_ = 40*(M_PI/180.0);
 };

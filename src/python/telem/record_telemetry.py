@@ -18,6 +18,7 @@ def setup_log_file(filename):
                     f"wheel{i+1}_vol",
                     f"wheel{i+1}_pos",
                     f"wheel{i+1}_temp",
+                    f"wheel{i+1}_pwm",
                 ]
             )
 
@@ -38,22 +39,26 @@ def setup_log_file(filename):
                     f"hebi_{loc}_temp_motor_winding",
                 ]
             )
+        
+        headers.append(f"in_transition")
 
         log_path.write_text(f"{','.join(headers)}\n")
 
-def write_telemetry(filename, t, steering_motor, bogie_motor, wheels):
+def write_telemetry(filename, t, steering_motor, bogie_motor, wheels, in_transition):
         log_row = [
             f"{t}",
         ]
 
+        wheel_telem = wheels.get_telemetry()
         for i in range(4):
             log_row.extend(
                 [
-                    f"{wheels.get_telemetry()[i]['velocity']}",
-                    f"{wheels.get_telemetry()[i]['current']}",
-                    f"{wheels.get_telemetry()[i]['voltage']}",
-                    f"{wheels.get_telemetry()[i]['position']}",
-                    f"{wheels.get_telemetry()[i]['temperature']}",
+                    f"{wheel_telem[i]['velocity']}",
+                    f"{wheel_telem[i]['current']}",
+                    f"{wheel_telem[i]['voltage']}",
+                    f"{wheel_telem[i]['position']}",
+                    f"{wheel_telem[i]['temperature']}",
+                    f"{wheel_telem[i]['pwm']}"
                 ]
             )
 
@@ -75,6 +80,8 @@ def write_telemetry(filename, t, steering_motor, bogie_motor, wheels):
                     f"{hebi_fbk.motor_winding_temperature[0]}",
                 ]
             )
+        
+        log_row.append(f"{in_transition}")
 
         log_path = log_dir_path / filename
         with log_path.open("a") as f:

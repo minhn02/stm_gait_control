@@ -9,4 +9,5 @@ enum Joint {
     FRONT_RIGHT_WHEEL,
     BACK_LEFT_WHEEL,
     BACK_RIGHT_WHEEL,
+    TRANSITIONING,
 };

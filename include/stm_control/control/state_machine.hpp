@@ -34,13 +34,15 @@ class StateMachine {
     std::map<Joint, double> execute(std::chrono::nanoseconds time, std::map<Joint, double> currPositions);
 
     private:
+   bool madeCommandGait_;
+    bool inStartup_;
+    TransitionType transitionType_;
     Gait::Gait *prevState_;
     Gait::Gait *currState_;
     std::chrono::nanoseconds startTime_;
     bool transitionStarted_;
     std::chrono::nanoseconds t2_;
     std::chrono::nanoseconds tt_;
-    bool transitionsEnabled_;
 };
 
 

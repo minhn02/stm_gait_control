@@ -1,25 +1,9 @@
 #pragma once
 
 #include "stm_control/gaits/gait.hpp"
-#include "bezier.h"
-#include "stm_control/trapezoidal_traj.h"
-#include "algorithm"
 
-enum TransitionType {
-    NAIVE,
-    LINEAR_WAYPOINT,
-    BEZIER_WAYPOINT,
-    BEZIER,
-};
-
-class TransitionGait : public Gait::Gait {
+class InitialGait : public Gait::Gait {
 public:
-
-    TransitionGait();
-    TransitionGait(Bezier::Curve<int64_t> curve);
-    TransitionGait(Bezier::Spline<int64_t> spline);
-    TransitionGait(std::vector<TrapezoidalTrajectory::TrapTraj<int64_t>> trapTrajectories);
-
     Eigen::VectorXd evaluate(std::chrono::nanoseconds t);
 
     /**
@@ -45,16 +29,10 @@ public:
      */
     std::map<Joint, double> run(std::chrono::nanoseconds time, std::chrono::nanoseconds startTime, std::map<Joint, double> jointStates);
 
-
     std::chrono::nanoseconds getPeriod() {
         return std::chrono::nanoseconds(period_);
     }
 
     private:
-    TransitionType type_;
-    Bezier::Curve<int64_t> curve_;
-    Bezier::Spline<int64_t> spline_;
-    std::vector<TrapezoidalTrajectory::TrapTraj<int64_t>> trapTrajectories_;
-    std::chrono::nanoseconds startTime_;
-    int64_t period_;
+    int64_t period_ = 0;
 };

@@ -1,23 +1,22 @@
-#include "stm_control/gaits/idle_gait.hpp"
+#include "stm_control/gaits/initial_gait.hpp"
 
-
-Eigen::VectorXd IdleGait::evaluate(std::chrono::nanoseconds t) {
-    Eigen::VectorXd result(2);
-    result << -steeringLimit_, 0;
-    return result;
-}
-
-Eigen::VectorXd IdleGait::derivative(std::chrono::nanoseconds t) {
+Eigen::VectorXd InitialGait::evaluate(std::chrono::nanoseconds t) {
     Eigen::VectorXd result(2);
     result << 0, 0;
     return result;
 }
 
-bool IdleGait::isFinished(std::chrono::nanoseconds currTime) {
+Eigen::VectorXd InitialGait::derivative(std::chrono::nanoseconds t) {
+    Eigen::VectorXd result(2);
+    result << 0, 0;
+    return result;
+}
+
+bool InitialGait::isFinished(std::chrono::nanoseconds currTime) {
     return false;
 }
     
-std::map<Joint, double> IdleGait::run(std::chrono::nanoseconds time, std::chrono::nanoseconds startTime, std::map<Joint, double> jointStates) {
+std::map<Joint, double> InitialGait::run(std::chrono::nanoseconds time, std::chrono::nanoseconds startTime, std::map<Joint, double> jointStates) {
     // process ROS time and system state
     std::chrono::nanoseconds gaitTime = time - startTime;
 
