@@ -41,7 +41,7 @@ namespace TrapezoidalTrajectory {
             }
 
             t -= t0_;
-            int sign = (t > Tc_/2) ? -1 : 1;
+            int sign = ((t%(2*Tc_)) > Tc_) ? -1 : 1;
 
             if (t < Tt_) {
                 return sign * vmaxTt_ * t;

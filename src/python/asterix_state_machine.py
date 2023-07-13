@@ -7,6 +7,8 @@ from peripherals.wheels.wheel_control import WheelControl
 import threading
 from telem.record_telemetry import *
 from sshkeyboard import listen_keyboard
+import numpy as np
+import sys
 
 DEG_TO_RAD = 3.1415/180.0
 control_period = 0.02 #seconds
@@ -21,11 +23,45 @@ steering_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_
 bogie_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
 wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization taken from Arthur's code
 
-filename = "test.csv"
+filename = "7-12-bogie-decrease.csv"
 setup_log_file(filename)
+
+Lx = 200
+Ly = 200
+Ly_Lx = Ly/Lx
+WHEEL_RADIUS = 100
+MAX_WHEEL_SPEED = wheels.max_speed
 
 def send_command(command):
     state_machine.switchState(command, timedelta(microseconds=time.time_ns()/1000))
+
+def wheel_speed_synchronization( steering_joint_angle, steering_joint_rate, forward_crawling=True ) :
+	b_2 = steering_joint_angle*0.5
+	db_2dt = steering_joint_rate*0.5
+
+	vs = np.array( [ ( -1 if i//2 else 1 )*( -Lx*np.tan( b_2 ) + ( -1 if i%2 else 1 )*Ly )*db_2dt for i in range( 4 ) ] )
+	cd = np.array( [ 1 + ( -1 if i%2 else 1 )*Ly_Lx*np.tan( b_2 ) for i in range( 4 ) ] )
+
+	if forward_crawling :
+		# Set the robot speed so that no wheel is going backward:
+		rover_speed = max( -vs/cd )
+	else :
+		rover_speed = 0
+
+	# Reduce the robot speed if needed according to the wheel speed limit:
+	max_rover_speed_per_wheel = ( MAX_WHEEL_SPEED*WHEEL_RADIUS - vs )/cd
+	rover_speed_capped = min( rover_speed, min(  max_rover_speed_per_wheel ) )
+
+	# Display which wheels were about to exceeded their maximum velocity before capping the rover speed:
+	if rover_speed_capped != rover_speed :
+		wheels_at_issue = np.where( max_rover_speed_per_wheel < rover_speed )[0] + 1
+		print( '\u26A0 Target exceeds max speed for wheel(s) %s (rover speed is capped to %+.f mm/s instead of %+.f mm/s)'
+		% ( str( wheels_at_issue ), rover_speed_capped, rover_speed ), file=sys.stderr )
+
+	# Compute the resulting speed for each wheel:
+	Wd = ( rover_speed_capped*cd + vs )/WHEEL_RADIUS
+
+	return Wd
 
 def control_loop():
         start_time = time.time_ns()
@@ -44,19 +80,21 @@ def control_loop():
         commands = state_machine.execute(timedelta(microseconds=time.time_ns()/1000), curr_states)
 
         # send commands to rover
-        # steering_motor.cmd_position(commands[stm_state_machine.Joint.STEERING_JOINT], commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
-        # bogie_motor.cmd_position(commands[stm_state_machine.Joint.BOGIE_JOINT], commands[stm_state_machine.Joint.BOGIE_JOINT_VEL])
+        steering_motor.cmd_position(commands[stm_state_machine.Joint.STEERING_JOINT], commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
+        bogie_motor.cmd_position(commands[stm_state_machine.Joint.BOGIE_JOINT], commands[stm_state_machine.Joint.BOGIE_JOINT_VEL])
 
         # wheelSpeeds = [commands[stm_state_machine.Joint.FRONT_LEFT_WHEEL], commands[stm_state_machine.Joint.FRONT_RIGHT_WHEEL],
         #             commands[stm_state_machine.Joint.BACK_LEFT_WHEEL], commands[stm_state_machine.Joint.BACK_RIGHT_WHEEL]]
-        # wheels.set_speeds(wheelSpeeds)
+        wheelSpeeds = wheel_speed_synchronization(commands[stm_state_machine.Joint.STEERING_JOINT], commands[stm_state_machine.Joint.STEERING_JOINT_VEL], forward_crawling=True)
+        wheels.set_speeds(wheelSpeeds)
 
         # log telem
         write_telemetry(filename, start_time/1e9, steering_motor, bogie_motor, wheels, commands[stm_state_machine.Joint.TRANSITIONING])
 
         # wait for next control period
         end_time = time.time_ns()
-        print("loop rate: ", 1/((end_time - start_time)/1e9))
+        print("steering pos", commands[stm_state_machine.Joint.STEERING_JOINT], "steering vel", commands[stm_state_machine.Joint.STEERING_JOINT_VEL], "wheel_commands", wheelSpeeds)
+        # print("loop rate: ", 1/((end_time - start_time)/1e9))
         time.sleep(max(0, control_period - (end_time - start_time)/1e9))
 
 # register keyboard callbacks

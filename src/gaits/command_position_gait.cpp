@@ -45,7 +45,7 @@ std::map<Joint, double> CommandPositionGait::run(std::chrono::nanoseconds time, 
 
     // evaluate positions
     Eigen::VectorXd positions = evaluate(time);
-    Eigen::VectorXd velocities = derivative(time);
+    Eigen::VectorXd velocities = derivative(time)*1e9;
 
     std::cout << "positions: " << positions(0) << " velocities: " << velocities(0) << std::endl;
 

@@ -37,7 +37,7 @@ namespace WheelController {
         
         // calculate the final wheel speeds
         for (int i = 0; i < 4; i++) {
-            wheelSpeeds[i] = (roverSpeedCapped * cDifferential[i] + vSteering[i])/WHEEL_RADIUS;
+            wheelSpeeds[i] = ((roverSpeedCapped * cDifferential[i] + vSteering[i])/WHEEL_RADIUS);
         }
 
         return wheelSpeeds;

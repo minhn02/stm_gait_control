@@ -31,12 +31,15 @@ def setup_log_file(filename):
                 [
                     f"hebi_{loc}_pos_desired",
                     f"hebi_{loc}_pos",
+                    f"hebi_{loc}_vel_desired",
+                    f"hebi_{loc}_vel",
                     f"hebi_{loc}_eff",
                     f"hebi_{loc}_cur_motor",
                     f"hebi_{loc}_cur_motor_winding",
                     f"hebi_{loc}_vol",
                     f"hebi_{loc}_temp_board",
                     f"hebi_{loc}_temp_motor_winding",
+                    f"hebi_{loc}_pwm",
                 ]
             )
         
@@ -72,12 +75,15 @@ def write_telemetry(filename, t, steering_motor, bogie_motor, wheels, in_transit
                 [
                     f"{hebi_fbk.position_command[0]}",
                     f"{hebi_fbk.position[0]}",
+                    f"{hebi_fbk.velocity_command[0]}"
+                    f"{hebi_fbk.velocity[0]}"
                     f"{hebi_fbk.effort[0]}",
                     f"{hebi_fbk.motor_current[0]}",
                     f"{hebi_fbk.motor_winding_current[0]}",
                     f"{hebi_fbk.voltage[0]}",
                     f"{hebi_fbk.board_temperature[0]}",
                     f"{hebi_fbk.motor_winding_temperature[0]}",
+                    f"{hebi_fbk.pwm_command[0]}"
                 ]
             )
         

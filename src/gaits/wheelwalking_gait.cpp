@@ -6,7 +6,7 @@ WheelWalkingGait::WheelWalkingGait(){
     steering_velocity_ = 15 * (M_PI / 180.0) / 1e9;
 
     bogieTransientDuration_ = 5e8;
-    bogieLimit_ = 25 * (M_PI / 180.0);
+    bogieLimit_ = 18 * (M_PI / 180.0);
     bogie_velocity_ = 10 * (M_PI / 180.0) / 1e9;
 
     zeroToForwardBogieTraj_ = TrapezoidalTrajectory::TrapTraj<int64_t>(0, bogieLimit_, bogie_velocity_, 0, bogieTransientDuration_);
@@ -70,7 +70,7 @@ std::map<Joint, double> WheelWalkingGait::run(std::chrono::nanoseconds time, std
 
     // evaluate positions
     Eigen::VectorXd positions = evaluate(gaitTime);
-    Eigen::VectorXd velocities = derivative(gaitTime);
+    Eigen::VectorXd velocities = derivative(gaitTime)*1e9;
 
     // calculate wheel speeds
     std::vector<double> wheelSpeeds = WheelController::calculateWheelSpeeds(positions(0), velocities(0));    

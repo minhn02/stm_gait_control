@@ -44,7 +44,7 @@ std::map<Joint, double> SquirmingGait::run(std::chrono::nanoseconds time, std::c
 
     // evaluate positions
     Eigen::VectorXd positions = evaluate(gaitTime);
-    Eigen::VectorXd velocities = derivative(gaitTime);
+    Eigen::VectorXd velocities = derivative(gaitTime)*1e9;
 
     // std::cout << "positions: " << positions(0) << " velocities: " << velocities(0) << std::endl;
 

@@ -86,7 +86,7 @@ std::map<Joint, double> TransitionGait::run(std::chrono::nanoseconds time, std::
 
     // evaluate positions
     Eigen::VectorXd positions = evaluate(time);
-    Eigen::VectorXd velocities = derivative(time);
+    Eigen::VectorXd velocities = derivative(time)*1e9;
 
     // calculate wheel speeds
     std::vector<double> wheelSpeeds = WheelController::calculateWheelSpeeds(positions(0), velocities(0));    

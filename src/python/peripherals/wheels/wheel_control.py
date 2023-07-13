@@ -54,8 +54,8 @@ class WheelControl:
     addr_present_pwm = 124
     len_present_pwm = 2
 
-    addr_telemetry_block = 126
-    len_telemetry_block = 21
+    addr_telemetry_block = 124
+    len_telemetry_block = 23
 
     # Conversion coefficient:
     speed_to_bytes = 41.69998508957956  # 1/( 0.229*2*pi/60 )
@@ -312,7 +312,7 @@ class WheelControl:
                 WheelControl.addr_present_pwm,
                 WheelControl.len_present_pwm,
             )
-
+            
             # Compute the two's complements to obtain signed values:
             if current > 32768:
                 current -= 65536
@@ -330,6 +330,7 @@ class WheelControl:
             velocity *= 0.023980823922402087  # rad/s # 0.229*2*pi/60
             position *= 1 / 4096  # rev
             voltage *= 0.1  # V
+            pwm *= .113
             # temperature already in deg C
 
             telemetry.append(
