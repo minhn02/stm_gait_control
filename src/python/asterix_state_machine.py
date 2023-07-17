@@ -9,6 +9,7 @@ from telem.record_telemetry import *
 from sshkeyboard import listen_keyboard
 import numpy as np
 import sys
+import peripherals.wheels.disable as wheel_disable
 
 DEG_TO_RAD = 3.1415/180.0
 control_period = 0.02 #seconds
@@ -23,7 +24,7 @@ steering_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_
 bogie_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
 wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization taken from Arthur's code
 
-filename = "7-12-bogie-decrease.csv"
+filename = "7-13-vicon-run-1.csv"
 setup_log_file(filename)
 
 Lx = 200
@@ -32,7 +33,12 @@ Ly_Lx = Ly/Lx
 WHEEL_RADIUS = 100
 MAX_WHEEL_SPEED = wheels.max_speed
 
+gait_names = ["IDLE", "SQUIRM", "WHEEL_WALKING", "INITIAL"]
+curr_gait_index = -1
+
 def send_command(command):
+    global curr_gait_index
+    curr_gait_index = command
     state_machine.switchState(command, timedelta(microseconds=time.time_ns()/1000))
 
 def wheel_speed_synchronization( steering_joint_angle, steering_joint_rate, forward_crawling=True ) :
@@ -63,8 +69,16 @@ def wheel_speed_synchronization( steering_joint_angle, steering_joint_rate, forw
 
 	return Wd
 
+last_transition_time = 0
+last_gait_command = 1
+
 def control_loop():
         start_time = time.time_ns()
+
+        # if start_time - last_transition_time > 1e9:
+        #     last_transition_time = start_time
+        #     last_gait_command = 1 if last_gait_command == 2 else 2
+        #     send_command(last_gait_command)
 
         # execute state machine
         wheel_telem = wheels.get_telemetry()
@@ -89,11 +103,10 @@ def control_loop():
         wheels.set_speeds(wheelSpeeds)
 
         # log telem
-        write_telemetry(filename, start_time/1e9, steering_motor, bogie_motor, wheels, commands[stm_state_machine.Joint.TRANSITIONING])
+        write_telemetry(filename, start_time/1e9, steering_motor, bogie_motor, wheels, commands[stm_state_machine.Joint.TRANSITIONING], gait_names[curr_gait_index])
 
         # wait for next control period
         end_time = time.time_ns()
-        print("steering pos", commands[stm_state_machine.Joint.STEERING_JOINT], "steering vel", commands[stm_state_machine.Joint.STEERING_JOINT_VEL], "wheel_commands", wheelSpeeds)
         # print("loop rate: ", 1/((end_time - start_time)/1e9))
         time.sleep(max(0, control_period - (end_time - start_time)/1e9))
 
@@ -118,4 +131,8 @@ listen_thread = threading.Thread(target=lambda: listen_keyboard(on_press=press, 
 listen_thread.start()
 
 while True:
-    control_loop()
+    try:
+        control_loop()
+    except KeyboardInterrupt:
+         print("////// Terminating Program //////")
+         wheel_disable.disable()

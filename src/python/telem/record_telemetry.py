@@ -44,10 +44,11 @@ def setup_log_file(filename):
             )
         
         headers.append(f"in_transition")
+        headers.append(f"gait_name")
 
         log_path.write_text(f"{','.join(headers)}\n")
 
-def write_telemetry(filename, t, steering_motor, bogie_motor, wheels, in_transition):
+def write_telemetry(filename, t, steering_motor, bogie_motor, wheels, in_transition, gait_name):
         log_row = [
             f"{t}",
         ]
@@ -88,6 +89,7 @@ def write_telemetry(filename, t, steering_motor, bogie_motor, wheels, in_transit
             )
         
         log_row.append(f"{in_transition}")
+        log_row.append(f"{gait_name}")
 
         log_path = log_dir_path / filename
         with log_path.open("a") as f:
