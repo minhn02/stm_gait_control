@@ -6,8 +6,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.figure import Figure
 from typing import List
+from vicon import merge_vicon_telemetry, read_motion
+import numpy as np
+from transforms3d.quaternions import quat2mat
+from transforms3d.euler import mat2euler
 
 hebi_names = ["steer", "bogie"]
+vicon_body_name = "asterix_body"
 
 def read_telem(path: Path):
     df = pd.read_csv(path)
@@ -57,10 +62,59 @@ def calculate_joint_work(df: pd.DataFrame) -> float:
     
     return joint_work
 
+def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
+    """given a dataframe representing a transition, calculates the heading change as delta [x, y, z, roll, pitch, yaw]"""
+    
+    #calculate 3d displacement
+    initial_pos = np.array([
+        df[f"{vicon_body_name}_x"].iloc[0]/1000,
+        df[f"{vicon_body_name}_y"].iloc[0]/1000,
+        df[f"{vicon_body_name}_z"].iloc[0]/1000
+    ])
+    
+    final_pos = np.array([
+        df[f"{vicon_body_name}_x"].iloc[-1]/1000,
+        df[f"{vicon_body_name}_y"].iloc[-1]/1000,
+        df[f"{vicon_body_name}_z"].iloc[-1]/1000
+    ])
+
+    displacement = (final_pos - initial_pos).tolist()
+    
+    initial_quaternion = [
+        df[f"{vicon_body_name}_q1"].iloc[0],
+        df[f"{vicon_body_name}_q2"].iloc[0],
+        df[f"{vicon_body_name}_q3"].iloc[0],
+        df[f"{vicon_body_name}_q4"].iloc[0]
+    ]
+    final_quaternion = [
+        df[f"{vicon_body_name}_q1"].iloc[-1],
+        df[f"{vicon_body_name}_q2"].iloc[-1],
+        df[f"{vicon_body_name}_q3"].iloc[-1],
+        df[f"{vicon_body_name}_q4"].iloc[-1]
+    ]
+
+    # Convert quaternions to rotation matrices
+    initial_rotation = quat2mat(initial_quaternion)
+    final_rotation = quat2mat(final_quaternion)
+
+    # Compute the change in rotation
+    rotation_change = np.dot(final_rotation, np.linalg.inv(initial_rotation))
+
+    # Convert the rotation matrix to roll, pitch, and yaw angles
+    rotation_change = list(mat2euler(rotation_change, 'sxyz'))
+
+    return displacement + rotation_change
+
 if __name__ == "__main__":
     log_path = Path(__file__).parent.parent / "logs" / "7-12" / "7-12-minimarsrun.csv"
+    vicon_path = "/home/minh/pybind_stm_control/logs/7-12/20230615Z172404_vicon_psquirm_m1p5.dat"
+
+    vicon_pd = read_motion(vicon_path)
     telem_pd = read_telem(log_path)
-    transitions = get_transitions(telem_pd)
+
+    # combined_pd = merge_vicon_telemetry(telem_pd, vicon_pd)
     
-    print(calculate_power_consumption(transitions[0]))
-    print(calculate_joint_work(transitions[0]))
+    transitions = get_transitions(telem_pd)
+
+    print(calculate_transition_pose_change(vicon_pd))
+    

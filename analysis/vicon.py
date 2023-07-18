@@ -12,7 +12,7 @@ import color as color
 BODY_OBJECT_NAME = "asterix_body"
 BOGIE_OBJECT_NAME = "asterix_bogie"
 
-def read_motion(path: str):
+def read_motion(path: str) -> pd.DataFrame:
     """
     Reads motion data based on given path.
     Skips two rows of data, since motion data always have one row of missing headers and one row of 'OCCL' (occlusion) datapoints.
@@ -101,6 +101,27 @@ def plot_motion(df: pd.DataFrame, title: str) -> Figure:
     fig.legend(loc="lower center", ncol=4)
 
     return fig
+
+
+def merge_vicon_telemetry(df_telem: pd.DataFrame, df_vicon: pd.DataFrame) -> pd.DataFrame:
+    # match beginning and end timestamps of vicon data to telemetry data
+    start_timestamp = df_telem["time"].min()
+    stop_timestamp = df_telem["time"].max()
+    df_vicon_cropped = df_vicon.loc[(df_vicon["time"] >= start_timestamp) & (df_vicon["time"] <= stop_timestamp)]
+
+    # find frequency of both time series data
+    telem_hz = int(1 / df_telem["time"].diff().mean())
+    vicon_hz = int(1 / df_vicon_cropped["time"].diff().mean())
+
+    # low pass, then downsample the vicon data to match telemetry
+    window_size = int(vicon_hz/telem_hz)
+    df_vicon_filtered = df_vicon_cropped.rolling(window=window_size, min_periods=1).mean()
+    df_downsampled = df_vicon_filtered[::window_size]
+    
+    # merge dataframes
+    merged_df = df_telem.merge(df_downsampled, left_index=True, right_index=True)
+
+    return merged_df
 
 
 def plot_motion_2d(df: pd.DataFrame, title: str) -> Figure:
