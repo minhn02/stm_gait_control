@@ -33,8 +33,12 @@ class StateMachine {
     */
     std::map<Joint, double> execute(std::chrono::nanoseconds time, std::map<Joint, double> currPositions);
 
+    uint8_t getCurrState();
+
+    bool inTransition();
+
     private:
-   bool madeCommandGait_;
+    bool madeCommandGait_;
     bool inStartup_;
     TransitionType transitionType_;
     Gait::Gait *prevState_;

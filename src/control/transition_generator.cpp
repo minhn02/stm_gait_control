@@ -43,6 +43,8 @@ namespace TransitionGenerator {
     }
 
     double cost_func(const std::vector<double> &x, std::vector<double> &grad, void* f_data) {
+        // cost calculations should be in units of seconds
+
         OptData *data = (OptData*)f_data;
         Gait::Gait *g1 = data->gait1;
         Gait::Gait *g2 = data->gait2;
@@ -62,10 +64,17 @@ namespace TransitionGenerator {
         std::vector<VectorXd> points = {P0, P1, P2, P3};
         Bezier::Curve<int64_t> curve(points, (int64_t)(x[0]) - t1, t1);
 
-        double avgVel = (1/(double)((int64_t)x[0] - t1)) * (curve.dEvaluate(t1) - curve.dEvaluate((int64_t)x[0])).norm();
+        // add velocity cost for uniformly sampled points over curve
+        double avgVel = 0;
+        int n_steps = 50;
+        int64_t time_delta = (int64_t)((x[0]) - t1)/(n_steps-1);
+        for (int i = 0; i < n_steps; i++) {
+            avgVel += curve.dEvaluate(i*time_delta).norm()/1e9;
+        }
+
+        // add duration cost for transition time
         double duration_cost = (double)duration/1e9;
 
-        avgVel = avgVel * 1e17;
         std::cout << "avgVel: " << avgVel << ", duration_cost: " << duration_cost << std::endl;
 
         return avgVel + duration_cost;
@@ -223,8 +232,8 @@ namespace TransitionGenerator {
         // penalize time
         double time_penalty = x[1]/1e9;
 
-        // std::cout << "final_diff: " << final_diff << " bezier traj diff: " << bezier_traj_penalty << " steering penalty: " << steering_penalty << " acceleration penalty: " << acceleration_penalty << " time penalty: " << time_penalty << std::endl;
-        obj_value = 1000*final_diff + bezier_traj_penalty + steering_penalty + acceleration_penalty/400 + 5*time_penalty;
+        std::cout << "final_diff: " << final_diff << " bezier traj diff: " << bezier_traj_penalty << " steering penalty: " << steering_penalty << " acceleration penalty: " << acceleration_penalty << " time penalty: " << time_penalty << std::endl;
+        obj_value = 200*final_diff + bezier_traj_penalty + 0*steering_penalty + 5*acceleration_penalty + 4*time_penalty;
 
         return obj_value;
     }
@@ -279,8 +288,8 @@ namespace TransitionGenerator {
         // penalize time
         double time_penalty = x[1]/1e9;
 
-        // std::cout << "final_diff: " << final_diff << " linear traj diff: " << linear_traj_diff << " steering penalty: " << steering_penalty << " acceleration penalty: " << acceleration_penalty << " time penalty: " << time_penalty << std::endl;
-        obj_value = 1000*final_diff + linear_traj_diff + steering_penalty + acceleration_penalty/400 + 5*time_penalty;
+        std::cout << "final_diff: " << 200*final_diff << " linear traj diff: " << linear_traj_diff << " steering penalty: " << 0*steering_penalty << " acceleration penalty: " << 5*acceleration_penalty << " time penalty: " << 4*time_penalty << std::endl;
+        obj_value = 200*final_diff + linear_traj_diff + 0*steering_penalty + 5*acceleration_penalty + 4*time_penalty;
 
         return obj_value;
     }
@@ -308,8 +317,13 @@ namespace TransitionGenerator {
 
         // make initial guess
         double tt_guess = 2e9;
-        std::vector<double> guess = {0, tt_guess};
-        VectorXd xf = gait2->evaluate(std::chrono::nanoseconds(0));
+        double gait1_completion = (double)(t1.count() - startTime.count())/(double)(gait1->getPeriod().count());
+        int64_t t2_guess = gait1_completion * gait2->getPeriod().count();
+
+        std::printf("gait1 completion: %f, t2_guess: %li \n", gait1_completion, t2_guess);
+
+        std::vector<double> guess = {(double)t2_guess, tt_guess};
+        VectorXd xf = gait2->evaluate(std::chrono::nanoseconds(t2_guess));
 
         VectorXd P0 = x0;
         VectorXd P3 = xf;
@@ -374,8 +388,13 @@ namespace TransitionGenerator {
 
         // make initial guess
         double tt_guess = 2e9;
-        std::vector<double> guess = {0, tt_guess};
-        VectorXd xf = gait2->evaluate(std::chrono::nanoseconds(0));
+        double gait1_completion = (double)(t1.count() - startTime.count())/(double)(gait1->getPeriod().count());
+        int64_t t2_guess = gait1_completion * gait2->getPeriod().count();
+
+        std::printf("gait1 completion: %f, t2_guess: %li \n", gait1_completion, t2_guess);
+
+        std::vector<double> guess = {(double)t2_guess, tt_guess};
+        VectorXd xf = gait2->evaluate(std::chrono::nanoseconds(t2_guess));
         VectorXd linear_step = (xf - x0)/num_waypoints;
         for (int i = 1; i < num_waypoints+1; i++) {
             VectorXd waypoint = x0 + linear_step*i;
@@ -389,7 +408,7 @@ namespace TransitionGenerator {
         double obj_value;
         try {
             result res = optimization.optimize(guess, obj_value);
-            std::printf("Optimized Vector {%f, %f}, with objective value %f \n", guess[0], guess[1], obj_value);
+            std::printf("Optimized Vector {%f, %f} w/ t1: {%li}, with objective value %f \n", guess[0], guess[1], t1.count(), obj_value);
         } catch (std::exception &e) {
             std::printf("Optimization failed: %s \n", e.what());
             std::printf("Optimized Vector {%f, %f}, with objective value %f \n", guess[0], guess[1], obj_value);
@@ -405,10 +424,6 @@ namespace TransitionGenerator {
         std::chrono::nanoseconds t2((int64_t)guess[0]);
         *t_t = tt + t1;
         *t_2 = t2;
-
-        for (std::size_t i; i < waypoints.size(); i++) {
-            std::printf("Waypoint %d: {%f, %f} \n", i, waypoints[i](0), waypoints[i](1));
-        }
 
         Bezier::Spline<int64_t> spline = Bezier::Spline<int64_t>(waypoints, guess[1], t1.count());
         return spline;

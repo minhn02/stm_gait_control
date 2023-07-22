@@ -95,6 +95,28 @@ namespace StateMachine {
             return currState_->run(time, startTime_, currPositions);
         }
     }
+
+    uint8_t StateMachine::getCurrState() {
+        if (currState_ == &idleGait) {
+            return 0;
+        } else if (currState_ == &squirmingGait) {
+            return 1;
+        } else if (currState_ == &wheelWalkingGait) {
+            return 2;
+        } else if (currState_ == &transition) {
+            return 3;
+        } else if (currState_ == &commandPositionGait) {
+            return 4;
+        } else if (currState_ == &initialGait) {
+            return 5;
+        } else {
+            return 0;
+        }
+    }
+
+    bool StateMachine::inTransition() {
+        return transitionStarted_;
+    }
 }
 
 PYBIND11_MODULE(stm_state_machine, m) {
@@ -112,5 +134,7 @@ PYBIND11_MODULE(stm_state_machine, m) {
     py::class_<StateMachine::StateMachine>(m, "StateMachine")
         .def(py::init<std::chrono::nanoseconds>())
         .def("switchState", &StateMachine::StateMachine::switchState)
-        .def("execute", &StateMachine::StateMachine::execute);
+        .def("execute", &StateMachine::StateMachine::execute)
+        .def("getCurrState", &StateMachine::StateMachine::getCurrState)
+        .def("inTransition", &StateMachine::StateMachine::inTransition);
 }
