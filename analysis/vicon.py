@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.spatial.transform import Rotation as R
 
 import color as color
 
@@ -56,6 +57,29 @@ def read_motion(path: str) -> pd.DataFrame:
     df_motion = df_motion.astype(float)
     update_body_names(df_motion)
     return df_motion
+
+def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
+    """Takes the combined vicon + telemetry dataframe, df, and sets the initial position to the origin, accounting for the steering and bogie angle"""
+    #get initial position
+    initial_x = df[f"{BODY_OBJECT_NAME}_x"].iloc[0]
+    initial_y = df[f"{BODY_OBJECT_NAME}_y"].iloc[0]
+    initial_z = df[f"{BODY_OBJECT_NAME}_z"].iloc[0]
+
+    #set initial position to origin
+    df[f"{BODY_OBJECT_NAME}_x"] = df[f"{BODY_OBJECT_NAME}_x"] - initial_x
+    df[f"{BODY_OBJECT_NAME}_y"] = df[f"{BODY_OBJECT_NAME}_y"] - initial_y
+    df[f"{BODY_OBJECT_NAME}_z"] = df[f"{BODY_OBJECT_NAME}_z"] - initial_z
+
+    initial_quaternion = [
+        df[f"{BODY_OBJECT_NAME}_q1"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q2"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q3"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q4"].iloc[0]
+    ]
+
+    r = R.from_quat(initial_quaternion)
+    rotation_matrix = r.as_matrix()
+
 
 
 def update_body_names(df: pd.DataFrame):

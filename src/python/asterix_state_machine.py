@@ -6,7 +6,7 @@ import peripherals.hebis.hebiX5 as hebi
 from peripherals.wheels.wheel_control import WheelControl
 import threading
 from telem.record_telemetry import *
-from sshkeyboard import listen_keyboard
+from sshkeyboard import listen_keyboard, stop_listening
 import numpy as np
 import sys
 import peripherals.wheels.disable as wheel_disable
@@ -34,7 +34,7 @@ steering_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_
 bogie_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
 wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization taken from Arthur's code
 
-filename = "7-21-everything-testing.csv"
+filename = "7-23-bezierway-1.csv"
 setup_log_file(filename)
 
 Lx = 200
@@ -87,19 +87,21 @@ def control_loop():
     start_time = time.time_ns()
 
     if transitions_started:
-        if state_machine.inTransition():
-            state_start_time = time.time_ns()
-            print("in transition state")
-        elif state_machine.getCurrState() == 1:
-            if time.time_ns() - state_start_time > squirming_transition_times[squirming_transition_index]:
-                state_machine.switchState(2, timedelta(microseconds=time.time_ns()//1000))
-                squirming_transition_index = (squirming_transition_index + 1) % n_transitions
-                print("switching to wheel walking, transition index: ", squirming_transition_index)
-        elif state_machine.getCurrState() == 2:
-            if time.time_ns() - state_start_time > wheel_walking_transition_times[wheel_walking_transition_index]:
-                state_machine.switchState(1, timedelta(microseconds=time.time_ns()//1000))
-                wheel_walking_transition_index = (wheel_walking_transition_index + 1) % n_transitions
-                print("switching to squirming, transition index: ", wheel_walking_transition_index)
+        if squirming_transition_index == n_transitions-1 and wheel_walking_transition_index == n_transitions -1:
+             print("Transitions ended")
+        else:
+            if state_machine.inTransition():
+                state_start_time = time.time_ns()
+            elif state_machine.getCurrState() == 1:
+                if time.time_ns() - state_start_time > squirming_transition_times[squirming_transition_index]:
+                    state_machine.switchState(2, timedelta(microseconds=time.time_ns()//1000))
+                    squirming_transition_index = (squirming_transition_index + 1) % n_transitions
+                    print("switching to wheel walking, transition index: ", squirming_transition_index)
+            elif state_machine.getCurrState() == 2:
+                if time.time_ns() - state_start_time > wheel_walking_transition_times[wheel_walking_transition_index]:
+                    state_machine.switchState(1, timedelta(microseconds=time.time_ns()//1000))
+                    wheel_walking_transition_index = (wheel_walking_transition_index + 1) % n_transitions
+                    print("switching to squirming, transition index: ", wheel_walking_transition_index)
 
     # execute state machine
     wheel_telem = wheels.get_telemetry()
@@ -134,18 +136,25 @@ def control_loop():
 def press(key):
     global state_start_time, transitions_started
     if key == 'q':
+        print("switching state to idle")
         send_command(0)
     elif key == 'w':
+        print("switching state to squirming")
         send_command(1)
     elif key == 'e':
+        print("switching state to wheel-walking")
         send_command(2)
     elif key == 'a':
+        print("switching transition to naive")
         send_command(3)
     elif key == 's':
+        print("switching transition to bezier")
         send_command(4)
     elif key == 'd':
+        print("switching transition to linear waypoint")
         send_command(5)
     elif key == 'f':
+        print("switching transition to bezier waypoint")
         send_command(6)
     elif key == 'z':
         send_command(1)
@@ -153,7 +162,7 @@ def press(key):
         state_start_time = time.time_ns()
         print("transitions started")
 
-listen_thread = threading.Thread(target=lambda: listen_keyboard(on_press=press, sequential=True))
+listen_thread = threading.Thread(target=lambda: listen_keyboard(on_press=press, sequential=True, until='p'))
 listen_thread.start()
 
 while True:
@@ -163,4 +172,5 @@ while True:
          print("////// Terminating Program //////")
          wheel_disable.disable()
          listen_thread.join()
+         stop_listening()
          break
