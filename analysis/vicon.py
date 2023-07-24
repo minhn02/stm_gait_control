@@ -58,28 +58,43 @@ def read_motion(path: str) -> pd.DataFrame:
     update_body_names(df_motion)
     return df_motion
 
-def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
+def transform_origin(df: pd.DataFrame):
     """Takes the combined vicon + telemetry dataframe, df, and sets the initial position to the origin, accounting for the steering and bogie angle"""
-    #get initial position
-    initial_x = df[f"{BODY_OBJECT_NAME}_x"].iloc[0]
-    initial_y = df[f"{BODY_OBJECT_NAME}_y"].iloc[0]
-    initial_z = df[f"{BODY_OBJECT_NAME}_z"].iloc[0]
+    
+    for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
+        #get initial position
+        initial_x = df[f"{body_name}_x"].iloc[0]
+        initial_y = df[f"{body_name}_y"].iloc[0]
+        initial_z = df[f"{body_name}_z"].iloc[0]
 
-    #set initial position to origin
-    df[f"{BODY_OBJECT_NAME}_x"] = df[f"{BODY_OBJECT_NAME}_x"] - initial_x
-    df[f"{BODY_OBJECT_NAME}_y"] = df[f"{BODY_OBJECT_NAME}_y"] - initial_y
-    df[f"{BODY_OBJECT_NAME}_z"] = df[f"{BODY_OBJECT_NAME}_z"] - initial_z
+        #set initial position to origin
+        df[f"{body_name}_x"] = df[f"{body_name}_x"] - initial_x
+        df[f"{body_name}_y"] = df[f"{body_name}_y"] - initial_y
+        df[f"{body_name}_z"] = df[f"{body_name}_z"] - initial_z
 
-    initial_quaternion = [
-        df[f"{BODY_OBJECT_NAME}_q1"].iloc[0],
-        df[f"{BODY_OBJECT_NAME}_q2"].iloc[0],
-        df[f"{BODY_OBJECT_NAME}_q3"].iloc[0],
-        df[f"{BODY_OBJECT_NAME}_q4"].iloc[0]
-    ]
+        initial_quaternion = [
+            df[f"{body_name}_q1"].iloc[0],
+            df[f"{body_name}_q2"].iloc[0],
+            df[f"{body_name}_q3"].iloc[0],
+            df[f"{body_name}_q4"].iloc[0]
+        ]
 
-    r = R.from_quat(initial_quaternion)
-    rotation_matrix = r.as_matrix()
+        r = R.from_quat(initial_quaternion)
+        R_intitial = r.as_matrix()
 
+        #can get intitial rpy from hebi telemetry
+        R_target = R.from_euler('xyz', []).as_matrix()
+
+        #get rotation matrix from initial to target
+        R_transform = np.dot(R_target, np.linalg.inv(R_intitial))
+
+        def transform_quaternion(quaternion):
+            rotated_quaternion = np.dot(R_transform, quaternion)
+            return rotated_quaternion / np.linalg.norm(rotated_quaternion)
+
+        #transform all quaternion data on the body
+        quaternion_columns = [f"{body_name}_q1", f"{body_name}_q2", f"{body_name}_q3", f"{body_name}_q4"]
+        df[quaternion_columns] = df[quaternion_columns].apply(transform_quaternion, axis=1)
 
 
 def update_body_names(df: pd.DataFrame):
