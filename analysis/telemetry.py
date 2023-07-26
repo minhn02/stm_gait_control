@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.figure import Figure
 from typing import List
-from vicon import merge_vicon_telemetry, read_motion
+import vicon
 import numpy as np
 from transforms3d.quaternions import quat2mat
 from transforms3d.euler import mat2euler
@@ -106,15 +106,22 @@ def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
     return displacement + rotation_change
 
 if __name__ == "__main__":
-    log_path = Path(__file__).parent.parent / "logs" / "7-12" / "7-12-minimarsrun.csv"
-    vicon_path = "/home/minh/pybind_stm_control/logs/7-12/20230615Z172404_vicon_psquirm_m1p5.dat"
+    log_path = Path(__file__).parent.parent / "logs" / "7-23-naive" / "7-23-naive-1.csv"
+    vicon_path = "/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat"
 
-    vicon_pd = read_motion(vicon_path)
+    vicon_pd = vicon.read_motion(vicon_path)
     telem_pd = read_telem(log_path)
+    print(telem_pd.head())
 
-    # combined_pd = merge_vicon_telemetry(telem_pd, vicon_pd)
+    combined_pd = vicon.merge_vicon_telemetry(telem_pd, vicon_pd)
+
+    print(combined_pd.head())
+
+    # combined_pd = vicon.transform_origin(combined_pd)
+
+    # vicon.plot_motion(combined_pd, "title")
     
-    transitions = get_transitions(telem_pd)
+    # transitions = get_transitions(telem_pd)
 
-    print(calculate_transition_pose_change(vicon_pd))
+    # print(calculate_transition_pose_change(vicon_pd))
     

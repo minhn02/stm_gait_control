@@ -61,6 +61,11 @@ def read_motion(path: str) -> pd.DataFrame:
 def transform_origin(df: pd.DataFrame):
     """Takes the combined vicon + telemetry dataframe, df, and sets the initial position to the origin, accounting for the steering and bogie angle"""
     
+    initial_angles = {
+        BODY_OBJECT_NAME : [0.0, 0.0, df["hebi_steer_pos"].iloc[0]],
+        BOGIE_OBJECT_NAME : [df["hebi_bogie_pos"].iloc[0], 0.0, 0.0]
+    }
+
     for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
         #get initial position
         initial_x = df[f"{body_name}_x"].iloc[0]
@@ -82,19 +87,24 @@ def transform_origin(df: pd.DataFrame):
         r = R.from_quat(initial_quaternion)
         R_intitial = r.as_matrix()
 
-        #can get intitial rpy from hebi telemetry
-        R_target = R.from_euler('xyz', []).as_matrix()
+        #set initial rover orientation to steering angle
+        R_target = R.from_euler('xyz', initial_angles[body_name]).as_matrix()
 
         #get rotation matrix from initial to target
         R_transform = np.dot(R_target, np.linalg.inv(R_intitial))
 
         def transform_quaternion(quaternion):
-            rotated_quaternion = np.dot(R_transform, quaternion)
+            rotation = R.from_quat(quaternion)
+            rotated_quaternion = rotation.apply(R_transform)
+            print("rotated quaternion", rotated_quaternion)
             return rotated_quaternion / np.linalg.norm(rotated_quaternion)
 
         #transform all quaternion data on the body
         quaternion_columns = [f"{body_name}_q1", f"{body_name}_q2", f"{body_name}_q3", f"{body_name}_q4"]
-        df[quaternion_columns] = df[quaternion_columns].apply(transform_quaternion, axis=1)
+        print(df[quaternion_columns].apply(transform_quaternion, axis=1)[0])
+        # df[quaternion_columns] = df[quaternion_columns].apply(transform_quaternion, axis=1)
+
+    return df
 
 
 def update_body_names(df: pd.DataFrame):
@@ -158,7 +168,7 @@ def merge_vicon_telemetry(df_telem: pd.DataFrame, df_vicon: pd.DataFrame) -> pd.
     df_downsampled = df_vicon_filtered[::window_size]
     
     # merge dataframes
-    merged_df = df_telem.merge(df_downsampled, left_index=True, right_index=True)
+    merged_df = df_telem.merge(df_downsampled)
 
     return merged_df
 
@@ -193,7 +203,7 @@ def plot_motion_2d(df: pd.DataFrame, title: str) -> Figure:
 
 
 if __name__ == "__main__":
-    path = "/home/minh/pybind_stm_control/logs/7-12/20230615Z172404_vicon_psquirm_m1p5.dat"
+    path = "/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat"
     df = read_motion(path)
     print(df.head)
     plot_motion(df, "Sample Data")
