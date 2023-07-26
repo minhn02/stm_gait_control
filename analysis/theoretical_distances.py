@@ -2,8 +2,6 @@
 import numpy as np
 from scipy.integrate import odeint
 from scipy.spatial.transform import Rotation
-import pickle
-
 
 DEG_TO_RAD = np.pi/180
 
@@ -72,7 +70,11 @@ def theoretical_distance_traveled( shifts ) :
 			Xw[wheel] = odeint( dX, Xw[wheel], [ 0, dt ] )[-1]
 
 	#return np.linalg.norm( sum( x[:2] for x in Xw )/4 )*1e3
-	return sum( x[0] for x in Xw )/4*1e3
+	delta_x = sum( x[0] for x in Xw )/4*1e3
+	delta_y = sum( x[1] for x in Xw )/4*1e3
+	delta_theta = sum( x[2] for x in Xw )/4*1e3
+
+	return (delta_x, delta_y, delta_theta)
 
 
 
@@ -82,9 +84,3 @@ for n_shifts in range( 1, 31 ) :
 	print( f'n_shifts={n_shifts} ', end='' )
 	theoretical_distances[str(n_shifts)] = theoretical_distance_traveled( n_shifts )
 	print( f'-> {theoretical_distances[str(n_shifts)]}' )
-
-
-with open( 'theoretical_distances.pkl', 'wb' ) as f:
-    pickle.dump( theoretical_distances, f )
-
-print( 'Theoretical distances saved in theoretical_distances.pkl' )

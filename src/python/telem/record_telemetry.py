@@ -76,15 +76,15 @@ def write_telemetry(filename, t, steering_motor, bogie_motor, wheels, in_transit
                 [
                     f"{hebi_fbk.position_command[0]}",
                     f"{hebi_fbk.position[0]}",
-                    f"{hebi_fbk.velocity_command[0]}"
-                    f"{hebi_fbk.velocity[0]}"
+                    f"{hebi_fbk.velocity_command[0]}",
+                    f"{hebi_fbk.velocity[0]}",
                     f"{hebi_fbk.effort[0]}",
                     f"{hebi_fbk.motor_current[0]}",
                     f"{hebi_fbk.motor_winding_current[0]}",
                     f"{hebi_fbk.voltage[0]}",
                     f"{hebi_fbk.board_temperature[0]}",
                     f"{hebi_fbk.motor_winding_temperature[0]}",
-                    f"{hebi_fbk.pwm_command[0]}"
+                    f"{hebi_fbk.pwm_command[0]}",
                 ]
             )
         
