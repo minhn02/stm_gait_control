@@ -3,3 +3,4 @@ dist
 stm_state_machine.egg-info
 .vscode
 __pycache__
+venv/
