@@ -13,6 +13,7 @@ import color as color
 BODY_OBJECT_NAME = "asterix_body"
 BOGIE_OBJECT_NAME = "asterix_bogie"
 
+
 def read_motion(path: str) -> pd.DataFrame:
     """
     Reads motion data based on given path.
@@ -58,21 +59,22 @@ def read_motion(path: str) -> pd.DataFrame:
     update_body_names(df_motion)
     return df_motion
 
+
 def transform_origin(df: pd.DataFrame):
     """Takes the combined vicon + telemetry dataframe, df, and sets the initial position to the origin, accounting for the steering and bogie angle"""
-    
+
     initial_angles = {
         BODY_OBJECT_NAME : [0.0, 0.0, df["hebi_steer_pos"].iloc[0]],
         BOGIE_OBJECT_NAME : [df["hebi_bogie_pos"].iloc[0], 0.0, 0.0]
     }
 
     for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
-        #get initial position
+        # get initial position
         initial_x = df[f"{body_name}_x"].iloc[0]
         initial_y = df[f"{body_name}_y"].iloc[0]
         initial_z = df[f"{body_name}_z"].iloc[0]
 
-        #set initial position to origin
+        # set initial position to origin
         df[f"{body_name}_x"] = df[f"{body_name}_x"] - initial_x
         df[f"{body_name}_y"] = df[f"{body_name}_y"] - initial_y
         df[f"{body_name}_z"] = df[f"{body_name}_z"] - initial_z
@@ -87,10 +89,10 @@ def transform_origin(df: pd.DataFrame):
         r = R.from_quat(initial_quaternion)
         R_intitial = r.as_matrix()
 
-        #set initial rover orientation to steering angle
+        # set initial rover orientation to steering angle
         R_target = R.from_euler('xyz', initial_angles[body_name]).as_matrix()
 
-        #get rotation matrix from initial to target
+        # get rotation matrix from initial to target
         R_transform = np.dot(R_target, np.linalg.inv(R_intitial))
 
         def transform_quaternion(quaternion):
@@ -99,7 +101,7 @@ def transform_origin(df: pd.DataFrame):
             print("rotated quaternion", rotated_quaternion)
             return rotated_quaternion / np.linalg.norm(rotated_quaternion)
 
-        #transform all quaternion data on the body
+        # transform all quaternion data on the body
         quaternion_columns = [f"{body_name}_q1", f"{body_name}_q2", f"{body_name}_q3", f"{body_name}_q4"]
         print(df[quaternion_columns].apply(transform_quaternion, axis=1)[0])
         # df[quaternion_columns] = df[quaternion_columns].apply(transform_quaternion, axis=1)
@@ -153,22 +155,21 @@ def plot_motion(df: pd.DataFrame, title: str) -> Figure:
 
 
 def merge_vicon_telemetry(df_telem: pd.DataFrame, df_vicon: pd.DataFrame) -> pd.DataFrame:
-    # match beginning and end timestamps of vicon data to telemetry data
-    start_timestamp = df_telem["time"].min()
-    stop_timestamp = df_telem["time"].max()
-    df_vicon_cropped = df_vicon.loc[(df_vicon["time"] >= start_timestamp) & (df_vicon["time"] <= stop_timestamp)]
+    """Return the df_telem DataFrame extended to include all columns from df_vicon. The number of rows and
+    timestamps will match df_telem, data from df_vicon is interpolated to match these timestamps."""
 
-    # find frequency of both time series data
-    telem_hz = int(1 / df_telem["time"].diff().mean())
-    vicon_hz = int(1 / df_vicon_cropped["time"].diff().mean())
+    # Extend df_vicon to have rows for all timestamps in both dataframes (new rows are empty)
+    time_index = pd.Index.union(pd.Index(df_telem["time"]), pd.Index(df_vicon["time"]))
+    df_vicon = df_vicon.set_index("time")
+    df_vicon = df_vicon.reindex(time_index)
 
-    # low pass, then downsample the vicon data to match telemetry
-    window_size = int(vicon_hz/telem_hz)
-    df_vicon_filtered = df_vicon_cropped.rolling(window=window_size, min_periods=1).mean()
-    df_downsampled = df_vicon_filtered[::window_size]
+    # Fill the empty rows by interpolating the data
+    df_vicon_interp = df_vicon.interpolate().reset_index()
     
-    # merge dataframes
-    merged_df = df_telem.merge(df_downsampled)
+    # Remove rows with timestamps not in df_telem
+    df_vicon_matched = df_vicon_interp[df_vicon_interp["time"].isin(df_telem["time"])].reset_index(drop=True)
+
+    merged_df = df_telem.merge(df_vicon_matched)
 
     return merged_df
 
