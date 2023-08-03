@@ -1,16 +1,11 @@
-import math
 from pathlib import Path
 from typing import List
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.figure import Figure
+import vicon
 from transforms3d.euler import mat2euler
 from transforms3d.quaternions import quat2mat
-
-import vicon
 
 hebi_names = ["steer", "bogie"]
 vicon_body_name = "asterix_body"
@@ -39,17 +34,22 @@ def get_transitions(df: pd.DataFrame) -> List[pd.DataFrame]:
 
 
 def calculate_power_consumption(df: pd.DataFrame) -> float:
-    """given a dataframe representing a transition, calculates the total power consumption over the interval the dataframe covers"""
+    """given a dataframe representing a transition, calculates the total power consumption over the interval
+    the dataframe covers"""
 
     # calculate wheel power
     wheel_power = 0
     for i in range(1, 5):
-        wheel_power += df[f"wheel{i}_vol"].multiply(df[f"wheel{i}_cur"]).abs().sum()/100
+        wheel_power += (
+            df[f"wheel{i}_vol"].multiply(df[f"wheel{i}_cur"]).abs().sum() / 100
+        )
 
     # calculate hebi power
     hebi_power = 0
     for name in hebi_names:
-        hebi_power += df[f"hebi_{name}_vol"].multiply(df[f"hebi_{name}_cur_motor"]).abs().sum()
+        hebi_power += (
+            df[f"hebi_{name}_vol"].multiply(df[f"hebi_{name}_cur_motor"]).abs().sum()
+        )
 
     return wheel_power + hebi_power
 
@@ -68,20 +68,25 @@ def calculate_joint_work(df: pd.DataFrame) -> float:
 
 
 def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
-    """given a dataframe representing a transition, calculates the heading change as delta [x, y, z, roll, pitch, yaw]"""
+    """given a dataframe representing a transition, calculates the heading change as delta [x, y, z, roll,
+    pitch, yaw]"""
 
     # calculate 3d displacement
-    initial_pos = np.array([
-        df[f"{vicon_body_name}_x"].iloc[0]/1000,
-        df[f"{vicon_body_name}_y"].iloc[0]/1000,
-        df[f"{vicon_body_name}_z"].iloc[0]/1000
-    ])
+    initial_pos = np.array(
+        [
+            df[f"{vicon_body_name}_x"].iloc[0] / 1000,
+            df[f"{vicon_body_name}_y"].iloc[0] / 1000,
+            df[f"{vicon_body_name}_z"].iloc[0] / 1000,
+        ]
+    )
 
-    final_pos = np.array([
-        df[f"{vicon_body_name}_x"].iloc[-1]/1000,
-        df[f"{vicon_body_name}_y"].iloc[-1]/1000,
-        df[f"{vicon_body_name}_z"].iloc[-1]/1000
-    ])
+    final_pos = np.array(
+        [
+            df[f"{vicon_body_name}_x"].iloc[-1] / 1000,
+            df[f"{vicon_body_name}_y"].iloc[-1] / 1000,
+            df[f"{vicon_body_name}_z"].iloc[-1] / 1000,
+        ]
+    )
 
     displacement = (final_pos - initial_pos).tolist()
 
@@ -113,7 +118,7 @@ def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
 
 if __name__ == "__main__":
     log_path = Path(__file__).parent.parent / "logs" / "7-23-naive" / "7-23-naive-1.csv"
-    vicon_path = "/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat"
+    vicon_path = Path("/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat")
 
     vicon_pd = vicon.read_motion(vicon_path)
     telem_pd = read_telem(log_path)

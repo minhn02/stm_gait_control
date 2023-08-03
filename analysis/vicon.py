@@ -1,29 +1,29 @@
 import re
+from pathlib import Path
 
+import color as color
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation as R
-
-import color as color
 
 BODY_OBJECT_NAME = "asterix_body"
 BOGIE_OBJECT_NAME = "asterix_bogie"
 
 
-def read_motion(path: str) -> pd.DataFrame:
+def read_motion(path: Path) -> pd.DataFrame:
     """
     Reads motion data based on given path.
-    Skips two rows of data, since motion data always have one row of missing headers and one row of 'OCCL' (occlusion) datapoints.
+    Skips two rows of data, since motion data always have one row of missing headers and one row of 'OCCL'
+    (occlusion) datapoints.
     Headers are added manually by hard-coded header definition in function.
     :param path: Path of motion .dat file.
     :return: Pandas Dataframe of motion data.
     """
-    with open(path) as f:
-        while not "header" in locals() or len(header) < 1:
+    with path.open() as f:
+        while "header" not in locals() or len(header) < 1:
             header = f.readline().strip("\n")
 
     number_position_sensors = int((len(header.split(" ")) - 1) / 8)
@@ -61,11 +61,12 @@ def read_motion(path: str) -> pd.DataFrame:
 
 
 def transform_origin(df: pd.DataFrame):
-    """Takes the combined vicon + telemetry dataframe, df, and sets the initial position to the origin, accounting for the steering and bogie angle"""
+    """Takes the combined vicon + telemetry dataframe, df, and sets the initial position to the origin,
+    accounting for the steering and bogie angle"""
 
     initial_angles = {
-        BODY_OBJECT_NAME : [0.0, 0.0, df["hebi_steer_pos"].iloc[0]],
-        BOGIE_OBJECT_NAME : [df["hebi_bogie_pos"].iloc[0], 0.0, 0.0]
+        BODY_OBJECT_NAME: [0.0, 0.0, df["hebi_steer_pos"].iloc[0]],
+        BOGIE_OBJECT_NAME: [df["hebi_bogie_pos"].iloc[0], 0.0, 0.0],
     }
 
     for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
@@ -83,14 +84,14 @@ def transform_origin(df: pd.DataFrame):
             df[f"{body_name}_q1"].iloc[0],
             df[f"{body_name}_q2"].iloc[0],
             df[f"{body_name}_q3"].iloc[0],
-            df[f"{body_name}_q4"].iloc[0]
+            df[f"{body_name}_q4"].iloc[0],
         ]
 
         r = R.from_quat(initial_quaternion)
         R_intitial = r.as_matrix()
 
         # set initial rover orientation to steering angle
-        R_target = R.from_euler('xyz', initial_angles[body_name]).as_matrix()
+        R_target = R.from_euler("xyz", initial_angles[body_name]).as_matrix()
 
         # get rotation matrix from initial to target
         R_transform = np.dot(R_target, np.linalg.inv(R_intitial))
@@ -102,7 +103,12 @@ def transform_origin(df: pd.DataFrame):
             return rotated_quaternion / np.linalg.norm(rotated_quaternion)
 
         # transform all quaternion data on the body
-        quaternion_columns = [f"{body_name}_q1", f"{body_name}_q2", f"{body_name}_q3", f"{body_name}_q4"]
+        quaternion_columns = [
+            f"{body_name}_q1",
+            f"{body_name}_q2",
+            f"{body_name}_q3",
+            f"{body_name}_q4",
+        ]
         print(df[quaternion_columns].apply(transform_quaternion, axis=1)[0])
         # df[quaternion_columns] = df[quaternion_columns].apply(transform_quaternion, axis=1)
 
@@ -154,9 +160,12 @@ def plot_motion(df: pd.DataFrame, title: str) -> Figure:
     return fig
 
 
-def merge_vicon_telemetry(df_telem: pd.DataFrame, df_vicon: pd.DataFrame) -> pd.DataFrame:
+def merge_vicon_telemetry(
+    df_telem: pd.DataFrame, df_vicon: pd.DataFrame
+) -> pd.DataFrame:
     """Return the df_telem DataFrame extended to include all columns from df_vicon. The number of rows and
-    timestamps will match df_telem, data from df_vicon is interpolated to match these timestamps."""
+    timestamps will match df_telem, data from df_vicon is interpolated to match these timestamps.
+    """
 
     # Extend df_vicon to have rows for all timestamps in both dataframes (new rows are empty)
     time_index = pd.Index.union(pd.Index(df_telem["time"]), pd.Index(df_vicon["time"]))
@@ -165,9 +174,11 @@ def merge_vicon_telemetry(df_telem: pd.DataFrame, df_vicon: pd.DataFrame) -> pd.
 
     # Fill the empty rows by interpolating the data
     df_vicon_interp = df_vicon.interpolate().reset_index()
-    
+
     # Remove rows with timestamps not in df_telem
-    df_vicon_matched = df_vicon_interp[df_vicon_interp["time"].isin(df_telem["time"])].reset_index(drop=True)
+    df_vicon_matched = df_vicon_interp[
+        df_vicon_interp["time"].isin(df_telem["time"])
+    ].reset_index(drop=True)
 
     merged_df = df_telem.merge(df_vicon_matched)
 
@@ -179,7 +190,9 @@ def plot_motion_2d(df: pd.DataFrame, title: str) -> Figure:
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
     if matplotlib.rcParams["text.usetex"]:
         fig.suptitle(
-            r"\Large{\textbf{Motion Capture - Body Position}}" "\n" r"\small{" + title + "}"
+            r"\Large{\textbf{Motion Capture - Body Position}}"
+            "\n"
+            r"\small{" + title + "}"
         )
     else:
         fig.suptitle(f"Motion Capture - Body Position\n({title})")
@@ -204,7 +217,7 @@ def plot_motion_2d(df: pd.DataFrame, title: str) -> Figure:
 
 
 if __name__ == "__main__":
-    path = "/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat"
+    path = Path("/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat")
     df = read_motion(path)
     print(df.head)
     plot_motion(df, "Sample Data")
