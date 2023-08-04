@@ -1,7 +1,6 @@
 """Functions for reading and processing telemetry data."""
 
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 
@@ -13,21 +12,6 @@ def read_telem(path: Path):
     for i in range(4):
         df[f"wheel{i+1}_pos"] -= df[f"wheel{i+1}_pos"].iloc[0]
     return df
-
-
-def get_transitions(df: pd.DataFrame) -> List[pd.DataFrame]:
-    """Returns a list of the dataframes of transitions"""
-
-    # Identify the start and end indices of consecutive runs
-    starts = df.index[(df["in_transition"] == 1) & (df["in_transition"].shift(1) == 0)]
-    ends = df.index[(df["in_transition"] == 0) & (df["in_transition"].shift(1) == 1)]
-
-    # Handle the case when the last run is ongoing
-    if len(ends) < len(starts):
-        ends = ends.append(pd.Index([df.index[-1]]))
-
-    runs = [df.iloc[start:end] for start, end in zip(starts, ends)]
-    return runs
 
 
 def calculate_power_consumption(df: pd.DataFrame) -> float:

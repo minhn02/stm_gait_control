@@ -123,7 +123,28 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
     return df_transformed
 
 
-def plot_motion(df: pd.DataFrame, title: str, arrows: bool = False) -> Figure:
+def get_transitions(df: pd.DataFrame) -> List[pd.DataFrame]:
+    """Return a list of dataframes which are subsets of the given df, one for each continous set of timestamps
+    during a transition."""
+
+    # Identify the start and end indices of consecutive runs
+    starts = df.index[(df["in_transition"] == 1) & (df["in_transition"].shift(1) == 0)]
+    ends = df.index[(df["in_transition"] == 0) & (df["in_transition"].shift(1) == 1)]
+
+    # Handle the case when the last run is ongoing
+    if len(ends) < len(starts):
+        ends = ends.append(pd.Index([df.index[-1]]))
+
+    runs = [df.iloc[start:end] for start, end in zip(starts, ends)]
+    return runs
+
+
+def plot_motion(
+    df: pd.DataFrame,
+    title: str,
+    show_arrows: bool = False,
+    show_transitions: bool = True,
+) -> Figure:
     """Plot the motion of the body and bogie objects in 3D."""
 
     # Create a new figure and a 3D axis
@@ -150,8 +171,25 @@ def plot_motion(df: pd.DataFrame, title: str, arrows: bool = False) -> Figure:
         color=color.front_hebi,
     )
 
+    # Highlight transitions
+    if show_transitions:
+        transitions = get_transitions(df)
+        for transition in transitions:
+            ax.plot(
+                transition[f"{BODY_OBJECT_NAME}_x"] / 10,
+                transition[f"{BODY_OBJECT_NAME}_y"] / 10,
+                transition[f"{BODY_OBJECT_NAME}_z"] / 10,
+                color="red",
+            )
+            ax.plot(
+                transition[f"{BOGIE_OBJECT_NAME}_x"] / 10,
+                transition[f"{BOGIE_OBJECT_NAME}_y"] / 10,
+                transition[f"{BOGIE_OBJECT_NAME}_z"] / 10,
+                color="red",
+            )
+
     # Add arrows indicating the orientation
-    if arrows:
+    if show_arrows:
         for index, row in df.iterrows():
             if index % 50 == 0:
                 body_pos = (
@@ -223,12 +261,14 @@ def plot_motion(df: pd.DataFrame, title: str, arrows: bool = False) -> Figure:
     ax.set_ylabel("Y (cm)")
     ax.set_zlabel("Z (cm)")
     ax.set_aspect("equal")
-    fig.legend(loc="lower center", ncol=4)
+    fig.legend(loc="lower center", ncol=2)
 
     return fig
 
 
-def plot_motion_2d(df: pd.DataFrame, title: str) -> Figure:
+def plot_motion_2d(
+    df: pd.DataFrame, title: str, show_transitions: bool = True
+) -> Figure:
     # Create a new figure and three subplots
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
     if matplotlib.rcParams["text.usetex"]:
@@ -244,6 +284,26 @@ def plot_motion_2d(df: pd.DataFrame, title: str) -> Figure:
     ax1.plot(df["time"], df[f"{BODY_OBJECT_NAME}_x"] / 10)
     ax2.plot(df["time"], df[f"{BODY_OBJECT_NAME}_y"] / 10)
     ax3.plot(df["time"], df[f"{BODY_OBJECT_NAME}_z"] / 10)
+
+    # Highlight transitions
+    if show_transitions:
+        transitions = get_transitions(df)
+        for transition in transitions:
+            ax1.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_x"] / 10,
+                color="red",
+            )
+            ax2.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_y"] / 10,
+                color="red",
+            )
+            ax3.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_z"] / 10,
+                color="red",
+            )
 
     ax3.set_xlabel("Time (s)")
     ax1.set_ylabel("X (cm)")
