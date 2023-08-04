@@ -1,6 +1,6 @@
 """Functions for reading and processing merged Vicon and telemetry data."""
 
-from typing import List
+from typing import List, Tuple
 
 import color as color
 import matplotlib
@@ -12,6 +12,11 @@ from scipy.spatial.transform import Rotation as R
 from transforms3d.euler import mat2euler
 from transforms3d.quaternions import quat2mat
 from vicon import BODY_OBJECT_NAME, BOGIE_OBJECT_NAME
+
+gait_colors = {
+    "WHEEL_WALKING": color.gait_wheel_walking,
+    "SQUIRM": color.gait_squirm,
+}
 
 
 def merge_vicon_telemetry(
@@ -123,20 +128,36 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
     return df_transformed
 
 
-def get_transitions(df: pd.DataFrame) -> List[pd.DataFrame]:
-    """Return a list of dataframes which are subsets of the given df, one for each continous set of timestamps
-    during a transition."""
+def get_transitions(df: pd.DataFrame) -> Tuple[List[pd.DataFrame], List[pd.DataFrame]]:
+    """Return a tuple, the first element is a list of dataframes which are subsets of the given df, one for
+    each continous set of timestamps during a transition, the second element is the same but for timestamps
+    outside of transitions.
+    """
 
     # Identify the start and end indices of consecutive runs
-    starts = df.index[(df["in_transition"] == 1) & (df["in_transition"].shift(1) == 0)]
-    ends = df.index[(df["in_transition"] == 0) & (df["in_transition"].shift(1) == 1)]
+    transition_starts = df.index[
+        (df["in_transition"] == 1) & (df["in_transition"].shift(1) == 0)
+    ]
+    transition_ends = df.index[
+        (df["in_transition"] == 0) & (df["in_transition"].shift(1) == 1)
+    ]
+
+    gait_starts = [0]
+    gait_starts.extend(transition_ends)
+    gait_ends = transition_starts
 
     # Handle the case when the last run is ongoing
-    if len(ends) < len(starts):
-        ends = ends.append(pd.Index([df.index[-1]]))
+    if len(transition_ends) < len(transition_starts):
+        transition_ends = transition_ends.append(pd.Index([df.index[-1]]))
 
-    runs = [df.iloc[start:end] for start, end in zip(starts, ends)]
-    return runs
+    if len(gait_ends) < len(gait_starts):
+        gait_ends = gait_ends.append(pd.Index([df.index[-1]]))
+
+    transitions = [
+        df.iloc[start:end] for start, end in zip(transition_starts, transition_ends)
+    ]
+    gaits = [df.iloc[start:end] for start, end in zip(gait_starts, gait_ends)]
+    return transitions, gaits
 
 
 def plot_motion(
@@ -173,7 +194,7 @@ def plot_motion(
 
     # Highlight transitions
     if show_transitions:
-        transitions = get_transitions(df)
+        transitions, gaits = get_transitions(df)
         for transition in transitions:
             ax.plot(
                 transition[f"{BODY_OBJECT_NAME}_x"] / 10,
@@ -187,6 +208,23 @@ def plot_motion(
                 transition[f"{BOGIE_OBJECT_NAME}_z"] / 10,
                 color="red",
             )
+        for gait in gaits:
+            try:
+                ax.plot(
+                    gait[f"{BODY_OBJECT_NAME}_x"] / 10,
+                    gait[f"{BODY_OBJECT_NAME}_y"] / 10,
+                    gait[f"{BODY_OBJECT_NAME}_z"] / 10,
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+                ax.plot(
+                    gait[f"{BOGIE_OBJECT_NAME}_x"] / 10,
+                    gait[f"{BOGIE_OBJECT_NAME}_y"] / 10,
+                    gait[f"{BOGIE_OBJECT_NAME}_z"] / 10,
+                    color=gait_colors[gait["gait_name"].iloc[0]]["bogie"],
+                )
+            except KeyError:
+                # This happens when "gait_name" does not have a defined color
+                pass
 
     # Add arrows indicating the orientation
     if show_arrows:
@@ -287,7 +325,7 @@ def plot_motion_2d(
 
     # Highlight transitions
     if show_transitions:
-        transitions = get_transitions(df)
+        transitions, gaits = get_transitions(df)
         for transition in transitions:
             ax1.plot(
                 transition["time"],
@@ -304,6 +342,26 @@ def plot_motion_2d(
                 transition[f"{BODY_OBJECT_NAME}_z"] / 10,
                 color="red",
             )
+        for gait in gaits:
+            try:
+                ax1.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_x"] / 10,
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+                ax2.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_y"] / 10,
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+                ax3.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_z"] / 10,
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+            except KeyError:
+                # This happens when "gait_name" does not have a defined color
+                pass
 
     ax3.set_xlabel("Time (s)")
     ax1.set_ylabel("X (cm)")
