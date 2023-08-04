@@ -1,14 +1,11 @@
+"""Functions for reading and processing telemetry data."""
+
 from pathlib import Path
 from typing import List
 
-import numpy as np
 import pandas as pd
-import vicon
-from transforms3d.euler import mat2euler
-from transforms3d.quaternions import quat2mat
 
 hebi_names = ["steer", "bogie"]
-vicon_body_name = "asterix_body"
 
 
 def read_telem(path: Path):
@@ -65,73 +62,3 @@ def calculate_joint_work(df: pd.DataFrame) -> float:
         joint_work += df[f"hebi_{name}_eff"].multiply(angular_displacement).sum()
 
     return joint_work
-
-
-def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
-    """given a dataframe representing a transition, calculates the heading change as delta [x, y, z, roll,
-    pitch, yaw]"""
-
-    # calculate 3d displacement
-    initial_pos = np.array(
-        [
-            df[f"{vicon_body_name}_x"].iloc[0] / 1000,
-            df[f"{vicon_body_name}_y"].iloc[0] / 1000,
-            df[f"{vicon_body_name}_z"].iloc[0] / 1000,
-        ]
-    )
-
-    final_pos = np.array(
-        [
-            df[f"{vicon_body_name}_x"].iloc[-1] / 1000,
-            df[f"{vicon_body_name}_y"].iloc[-1] / 1000,
-            df[f"{vicon_body_name}_z"].iloc[-1] / 1000,
-        ]
-    )
-
-    displacement = (final_pos - initial_pos).tolist()
-
-    initial_quaternion = [
-        df[f"{vicon_body_name}_q1"].iloc[0],
-        df[f"{vicon_body_name}_q2"].iloc[0],
-        df[f"{vicon_body_name}_q3"].iloc[0],
-        df[f"{vicon_body_name}_q4"].iloc[0],
-    ]
-    final_quaternion = [
-        df[f"{vicon_body_name}_q1"].iloc[-1],
-        df[f"{vicon_body_name}_q2"].iloc[-1],
-        df[f"{vicon_body_name}_q3"].iloc[-1],
-        df[f"{vicon_body_name}_q4"].iloc[-1],
-    ]
-
-    # Convert quaternions to rotation matrices
-    initial_rotation = quat2mat(initial_quaternion)
-    final_rotation = quat2mat(final_quaternion)
-
-    # Compute the change in rotation
-    rotation_change = np.dot(final_rotation, np.linalg.inv(initial_rotation))
-
-    # Convert the rotation matrix to roll, pitch, and yaw angles
-    rotation_change = list(mat2euler(rotation_change, "sxyz"))
-
-    return displacement + rotation_change
-
-
-if __name__ == "__main__":
-    log_path = Path(__file__).parent.parent / "logs" / "7-23-naive" / "7-23-naive-1.csv"
-    vicon_path = Path("/home/minh/pybind_stm_control/logs/7-23-naive/7-23-naive-1.dat")
-
-    vicon_pd = vicon.read_motion(vicon_path)
-    telem_pd = read_telem(log_path)
-    print(telem_pd.head())
-
-    combined_pd = vicon.merge_vicon_telemetry(telem_pd, vicon_pd)
-
-    print(combined_pd.head())
-
-    # combined_pd = vicon.transform_origin(combined_pd)
-
-    # vicon.plot_motion(combined_pd, "title")
-
-    # transitions = get_transitions(telem_pd)
-
-    # print(calculate_transition_pose_change(vicon_pd))
