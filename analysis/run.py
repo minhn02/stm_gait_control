@@ -34,10 +34,10 @@ if __name__ == "__main__":
     merged_df = analysis.merge_vicon_telemetry(telem_df, vicon_df)
     transformed_df = analysis.transform_origin(merged_df)
 
-    analysis.plot_motion(merged_df, "Original Data", arrows=True)
+    analysis.plot_motion(merged_df, "Original Data", show_arrows=True)
     analysis.plot_motion_2d(merged_df, "Original Data")
 
-    analysis.plot_motion(transformed_df, "Transformed Data", arrows=True)
+    analysis.plot_motion(transformed_df, "Transformed Data", show_arrows=True)
     analysis.plot_motion_2d(transformed_df, "Transformed Data")
 
     plt.show()
