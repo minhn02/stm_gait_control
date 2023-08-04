@@ -74,6 +74,10 @@ transition_index = 0
 curr_gait_index = 1
 gait_switcher = GaitSwitcher([1, 2], [squirming_period, wheel_walking_period], n_transitions)
 
+# bogie_disable_buffer
+# need buffer because there's one timestep where the rover is transitioning to squirming and disables the bogie torque
+buffer = False
+
 def send_command(command: int):
     global curr_gait_index, transition_index
     if command < 3:
@@ -83,6 +87,7 @@ def send_command(command: int):
     state_machine.switchState(command, timedelta(microseconds=time.time_ns()/1000))
 
 def control_loop():
+    global buffer
     start_time = time.time_ns()
 
     gait_time = state_machine.getCurrGaitTime(timedelta(microseconds=(int)(time.time_ns()//1000)))
@@ -97,8 +102,12 @@ def control_loop():
 
     # set bogie joint to 0 effort when squirming
     if state_machine.getCurrState() == 1 and not state_machine.inTransition():
-        bogie_motor.disable_torque()
+        if buffer:
+            bogie_motor.disable_torque()
+        else:
+            buffer = True
     else:
+         buffer = False
          bogie_motor.enable_torque()
 
     # execute state machine
@@ -114,8 +123,10 @@ def control_loop():
         
     commands = state_machine.execute(timedelta(microseconds=time.time_ns()/1000), curr_states)
     # send commands to rover
-    steering_motor.cmd_position(commands[stm_state_machine.Joint.STEERING_JOINT], commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
-    bogie_motor.cmd_position(commands[stm_state_machine.Joint.BOGIE_JOINT], commands[stm_state_machine.Joint.BOGIE_JOINT_VEL])
+    commanded_steer_position = np.clip(commands[stm_state_machine.Joint.STEERING_JOINT], -steering_limit, steering_limit)
+    steering_motor.cmd_position(commanded_steer_position, commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
+    commanded_bogie_position = np.clip(commands[stm_state_machine.Joint.BOGIE_JOINT], -bogie_limit, bogie_limit)
+    bogie_motor.cmd_position(commanded_bogie_position, commands[stm_state_machine.Joint.BOGIE_JOINT_VEL])
 
     # wheelSpeeds = [commands[stm_state_machine.Joint.FRONT_LEFT_WHEEL], commands[stm_state_machine.Joint.FRONT_RIGHT_WHEEL],
     #             commands[stm_state_machine.Joint.BACK_LEFT_WHEEL], commands[stm_state_machine.Joint.BACK_RIGHT_WHEEL]]
