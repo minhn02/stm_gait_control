@@ -17,6 +17,8 @@ WheelWalkingGait::WheelWalkingGait(){
     backwardtoZeroBogieTraj_ = TrapezoidalTrajectory::TrapTraj<int64_t>(-bogieLimit_, 0, bogie_velocity_, zeroToForwardBogieTraj_.duration() + forwardSteerTraj_.duration() + forwardtoZeroBogieTraj_.duration() + zerotoBackwardBogieTraj_.duration() + backwardSteerTraj_.duration(), bogieTransientDuration_);
 
     period_ = zeroToForwardBogieTraj_.duration() + forwardSteerTraj_.duration() + forwardtoZeroBogieTraj_.duration() + zerotoBackwardBogieTraj_.duration() + backwardSteerTraj_.duration() + backwardtoZeroBogieTraj_.duration();
+
+    cartesian_trajectory_ = RoverTrajectory::translate_to_cartesian_gait(this, 1000, period_, 0, {0, 0, 0});
 }
 
 Eigen::VectorXd WheelWalkingGait::evaluate(std::chrono::nanoseconds t) {
@@ -55,6 +57,11 @@ Eigen::VectorXd WheelWalkingGait::derivative(std::chrono::nanoseconds t) {
         result << 0, backwardtoZeroBogieTraj_.velocity(state_time);
     }
     return result;
+}
+
+Eigen::Vector3d WheelWalkingGait::displacement(std::chrono::nanoseconds t) {
+    int64_t state_time = t.count() % period_;
+    return cartesian_trajectory_.evaluate(state_time);
 }
 
 bool WheelWalkingGait::isFinished(std::chrono::nanoseconds currTime) {

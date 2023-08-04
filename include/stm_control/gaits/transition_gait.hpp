@@ -4,6 +4,7 @@
 #include "bezier.h"
 #include "stm_control/trapezoidal_traj.h"
 #include "algorithm"
+#include "stm_control/control/rover_trajectory.hpp"
 
 enum TransitionType {
     NAIVE,
@@ -29,6 +30,8 @@ public:
      * @returns the velocity of controlled joints at time t
      */
     Eigen::VectorXd derivative(std::chrono::nanoseconds t);
+
+    Eigen::Vector3d displacement(std::chrono::nanoseconds t);
 
     /**
      * @returns if the gait is finished (for non-periodic gaits)

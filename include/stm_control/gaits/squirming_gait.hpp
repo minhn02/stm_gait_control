@@ -2,6 +2,7 @@
 
 #include "stm_control/gaits/gait.hpp"
 #include "stm_control/trapezoidal_traj.h"
+#include "stm_control/control/rover_trajectory.hpp"
 
 class SquirmingGait : public Gait::Gait {
 public:
@@ -16,6 +17,8 @@ public:
      * @returns the velocity of controlled joints at time t
      */
     Eigen::VectorXd derivative(std::chrono::nanoseconds t);
+
+    Eigen::Vector3d displacement(std::chrono::nanoseconds t);
 
     /**
      * @returns if the gait is finished (for non-periodic gaits)
@@ -45,4 +48,6 @@ public:
     double steeringLimit_;
     double steering_velocity_;
     double steering_goal_;
+
+    Bezier::Spline<int64_t> cartesian_trajectory_;
 };

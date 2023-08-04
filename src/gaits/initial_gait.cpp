@@ -12,6 +12,10 @@ Eigen::VectorXd InitialGait::derivative(std::chrono::nanoseconds t) {
     return result;
 }
 
+Eigen::Vector3d InitialGait::displacement(std::chrono::nanoseconds t) {
+    return Eigen::Vector3d::Zero();
+}
+
 bool InitialGait::isFinished(std::chrono::nanoseconds currTime) {
     return false;
 }

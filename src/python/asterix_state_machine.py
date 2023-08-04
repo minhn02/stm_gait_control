@@ -103,6 +103,12 @@ def control_loop():
                     wheel_walking_transition_index = (wheel_walking_transition_index + 1) % n_transitions
                     print("switching to squirming, transition index: ", wheel_walking_transition_index)
 
+    # set bogie joint to 0 effort when squirming
+    if state_machine.getCurrState() == 1:
+        bogie_motor.disable_torque()
+    else:
+         bogie_motor.enable_torque()
+
     # execute state machine
     wheel_telem = wheels.get_telemetry()
     curr_states = {

@@ -13,6 +13,10 @@ Eigen::VectorXd IdleGait::derivative(std::chrono::nanoseconds t) {
     return result;
 }
 
+Eigen::Vector3d IdleGait::displacement(std::chrono::nanoseconds t) {
+    return Eigen::Vector3d::Zero();
+}
+
 bool IdleGait::isFinished(std::chrono::nanoseconds currTime) {
     return false;
 }

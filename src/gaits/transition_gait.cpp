@@ -63,6 +63,10 @@ Eigen::VectorXd TransitionGait::derivative(std::chrono::nanoseconds t) {
     }
 }
 
+Eigen::Vector3d TransitionGait::displacement(std::chrono::nanoseconds t) {
+    return Eigen::Vector3d::Zero();
+}
+
 bool TransitionGait::isFinished(std::chrono::nanoseconds currTime) {
     switch (type_) {
         case NAIVE:

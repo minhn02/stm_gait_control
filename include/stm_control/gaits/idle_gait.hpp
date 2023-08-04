@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stm_control/gaits/gait.hpp"
+#include "stm_control/control/rover_trajectory.hpp"
 
 class IdleGait : public Gait::Gait {
 public:
@@ -13,6 +14,8 @@ public:
      * @returns the velocity of controlled joints at time t
      */
     Eigen::VectorXd derivative(std::chrono::nanoseconds t);
+
+    Eigen::Vector3d displacement(std::chrono::nanoseconds t);
 
     /**
      * @returns if the gait is finished (for non-periodic gaits)

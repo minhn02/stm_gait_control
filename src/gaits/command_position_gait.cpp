@@ -30,6 +30,10 @@ Eigen::VectorXd CommandPositionGait::derivative(std::chrono::nanoseconds t) {
     return result;
 }
 
+Eigen::Vector3d CommandPositionGait::displacement(std::chrono::nanoseconds t) {
+    return Eigen::Vector3d::Zero();
+}
+
 bool CommandPositionGait::isFinished(std::chrono::nanoseconds currTime) {
     return isFinished_;
 }

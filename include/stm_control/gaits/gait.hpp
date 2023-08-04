@@ -36,6 +36,14 @@ namespace Gait {
         virtual Eigen::VectorXd derivative(std::chrono::nanoseconds t) = 0;
 
         /**
+         * Gets the expected rover deviation at time t of the gait's period. The deviation is in reference to the frame of the rover at the current gait cycle when t=0
+         * @param t the time to evaluate the the joint displacement at
+         * 
+         * @returns a vector of [delta_x, delta_y, delta_theta]
+        */
+        virtual Eigen::Vector3d displacement(std::chrono::nanoseconds t) = 0;
+
+        /**
          * @returns if the gait is finished (for non-periodic gaits)
         */
         virtual bool isFinished(std::chrono::nanoseconds currTime) = 0;

@@ -6,6 +6,7 @@
 #include "nlopt.hpp"
 #include <vector>
 #include "stm_control/trapezoidal_traj.h"
+#include "stm_control/control/rover_trajectory.hpp"
 
 namespace TransitionGenerator {
 

@@ -2,6 +2,7 @@
 
 #include "stm_control/gaits/gait.hpp"
 #include "stm_control/trapezoidal_traj.h"
+#include "stm_control/control/rover_trajectory.hpp"
 
 class WheelWalkingGait : public Gait::Gait {
 
@@ -17,6 +18,8 @@ class WheelWalkingGait : public Gait::Gait {
      * @returns the velocity of controlled joints at time t
      */
     Eigen::VectorXd derivative(std::chrono::nanoseconds t);
+
+    Eigen::Vector3d displacement(std::chrono::nanoseconds t);
 
     /**
      * @returns if the gait is finished (for non-periodic gaits)
@@ -53,4 +56,6 @@ class WheelWalkingGait : public Gait::Gait {
     TrapezoidalTrajectory::TrapTraj<int64_t> zeroToForwardBogieTraj_;
     TrapezoidalTrajectory::TrapTraj<int64_t> backwardtoZeroBogieTraj_;
     TrapezoidalTrajectory::TrapTraj<int64_t> zerotoBackwardBogieTraj_;
+
+    Bezier::Spline<int64_t> cartesian_trajectory_;
 };

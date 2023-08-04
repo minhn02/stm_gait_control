@@ -7,6 +7,8 @@ SquirmingGait::SquirmingGait() {
     forwardTraj_ = TrapezoidalTrajectory::TrapTraj<int64_t>(-steeringLimit_, steeringLimit_, steering_velocity_, 0, transientDuration_);
     backwardTraj_ = TrapezoidalTrajectory::TrapTraj<int64_t>(steeringLimit_, -steeringLimit_, steering_velocity_, forwardTraj_.duration(), transientDuration_);
     period_ = forwardTraj_.duration() + backwardTraj_.duration();
+
+    cartesian_trajectory_ = RoverTrajectory::translate_to_cartesian_gait(this, 1000, period_, 0, {0, 0, 0});
 }
 
 Eigen::VectorXd SquirmingGait::evaluate(std::chrono::nanoseconds t) {
@@ -29,6 +31,11 @@ Eigen::VectorXd SquirmingGait::derivative(std::chrono::nanoseconds t) {
         result << backwardTraj_.velocity(state_time), 0;
     }
     return result;
+}
+
+Eigen::Vector3d SquirmingGait::displacement(std::chrono::nanoseconds t) {
+    int64_t state_time = t.count() % period_;
+    return cartesian_trajectory_.evaluate(state_time);
 }
 
 bool SquirmingGait::isFinished(std::chrono::nanoseconds currTime) {
