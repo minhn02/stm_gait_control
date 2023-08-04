@@ -10,21 +10,19 @@ from sshkeyboard import listen_keyboard, stop_listening
 import numpy as np
 import sys
 import peripherals.wheels.disable as wheel_disable
+from gait_switcher import GaitSwitcher
 
 DEG_TO_RAD = 3.1415/180.0
 control_period = 0.02 #seconds
 steering_limit = 40*DEG_TO_RAD
 bogie_limit = 15*DEG_TO_RAD
 
+filename = "8-4-telem-testing2.csv"
+setup_log_file(filename)
+
 n_transitions = 5
 squirming_period = 11066666666
 wheel_walking_period = 23066666666
-squirming_transition_times = [(squirming_period/n_transitions)*(i+1) for i in range(n_transitions)]
-wheel_walking_transition_times = [(wheel_walking_period/n_transitions)*(i+1) for i in range(n_transitions)]
-squirming_transition_index = 0
-wheel_walking_transition_index = 0
-transitions_started = False
-state_start_time = 0
 
 #initialize state machine with current time in nanoseconds (have to convert to microseconds for timedelta support)
 state_machine = stm_state_machine.StateMachine(timedelta(microseconds=time.time_ns()/1000))
@@ -34,77 +32,71 @@ steering_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_STEER_
 bogie_motor = hebi.Hebi(family_name=HEBI_FAMILY_NAME, module_name=HEBI_BOGIE_NAME)
 wheels = WheelControl([1, 2, 3, 4], [False, True, False, True]) #initialization taken from Arthur's code
 
-filename = "7-23-bezierway-1.csv"
-setup_log_file(filename)
-
 Lx = 200
 Ly = 200
 Ly_Lx = Ly/Lx
 WHEEL_RADIUS = 100
 MAX_WHEEL_SPEED = wheels.max_speed
 
-gait_names = ["IDLE", "SQUIRM", "WHEEL_WALKING", "INITIAL", "NAIVE", "BEZIER", "BEZIER_WAYPOINT", "LINEAR_WAYPOINT"]
-curr_gait_index = -1
+def wheel_speed_synchronization( steering_joint_angle, steering_joint_rate, forward_crawling=True ) :
+    b_2 = steering_joint_angle*0.5
+    db_2dt = steering_joint_rate*0.5
+
+    vs = np.array( [ ( -1 if i//2 else 1 )*( -Lx*np.tan( b_2 ) + ( -1 if i%2 else 1 )*Ly )*db_2dt for i in range( 4 ) ] )
+    cd = np.array( [ 1 + ( -1 if i%2 else 1 )*Ly_Lx*np.tan( b_2 ) for i in range( 4 ) ] )
+
+    if forward_crawling :
+        # Set the robot speed so that no wheel is going backward:
+        rover_speed = max( -vs/cd )
+    else :
+        rover_speed = 0
+
+    # Reduce the robot speed if needed according to the wheel speed limit:
+    max_rover_speed_per_wheel = ( MAX_WHEEL_SPEED*WHEEL_RADIUS - vs )/cd
+    rover_speed_capped = min( rover_speed, min(  max_rover_speed_per_wheel ) )
+
+    # Display which wheels were about to exceeded their maximum velocity before capping the rover speed:
+    if rover_speed_capped != rover_speed :
+        wheels_at_issue = np.where( max_rover_speed_per_wheel < rover_speed )[0] + 1
+        print( '\u26A0 Target exceeds max speed for wheel(s) %s (rover speed is capped to %+.f mm/s instead of %+.f mm/s)'
+        % ( str( wheels_at_issue ), rover_speed_capped, rover_speed ), file=sys.stderr )
+
+    # Compute the resulting speed for each wheel:
+    Wd = ( rover_speed_capped*cd + vs )/WHEEL_RADIUS
+
+    return Wd
+
+gait_names = ["IDLE", "SQUIRM", "WHEEL_WALKING", "TRANSITION", "STARTUP", "INITIAL"]
+transition_names = ["NAIVE", "BEZIER", "LINEAR_WAYPOINT", "BEZIER_WAYPOINT"]
+transition_index = 0
+
+# switching logic
+curr_gait_index = 1
+gait_switcher = GaitSwitcher([1, 2], [squirming_period, wheel_walking_period], n_transitions)
 
 def send_command(command: int):
-    global curr_gait_index
-    curr_gait_index = command
+    global curr_gait_index, transition_index
+    if command < 3:
+        curr_gait_index = command
+    else:
+        transition_index = command - 3
     state_machine.switchState(command, timedelta(microseconds=time.time_ns()/1000))
 
-def wheel_speed_synchronization( steering_joint_angle, steering_joint_rate, forward_crawling=True ) :
-	b_2 = steering_joint_angle*0.5
-	db_2dt = steering_joint_rate*0.5
-
-	vs = np.array( [ ( -1 if i//2 else 1 )*( -Lx*np.tan( b_2 ) + ( -1 if i%2 else 1 )*Ly )*db_2dt for i in range( 4 ) ] )
-	cd = np.array( [ 1 + ( -1 if i%2 else 1 )*Ly_Lx*np.tan( b_2 ) for i in range( 4 ) ] )
-
-	if forward_crawling :
-		# Set the robot speed so that no wheel is going backward:
-		rover_speed = max( -vs/cd )
-	else :
-		rover_speed = 0
-
-	# Reduce the robot speed if needed according to the wheel speed limit:
-	max_rover_speed_per_wheel = ( MAX_WHEEL_SPEED*WHEEL_RADIUS - vs )/cd
-	rover_speed_capped = min( rover_speed, min(  max_rover_speed_per_wheel ) )
-
-	# Display which wheels were about to exceeded their maximum velocity before capping the rover speed:
-	if rover_speed_capped != rover_speed :
-		wheels_at_issue = np.where( max_rover_speed_per_wheel < rover_speed )[0] + 1
-		print( '\u26A0 Target exceeds max speed for wheel(s) %s (rover speed is capped to %+.f mm/s instead of %+.f mm/s)'
-		% ( str( wheels_at_issue ), rover_speed_capped, rover_speed ), file=sys.stderr )
-
-	# Compute the resulting speed for each wheel:
-	Wd = ( rover_speed_capped*cd + vs )/WHEEL_RADIUS
-
-	return Wd
-
-last_transition_time = 0
-last_gait_command = 1
-
 def control_loop():
-    global state_start_time, squirming_transition_index, wheel_walking_transition_index
     start_time = time.time_ns()
 
-    if transitions_started:
-        if squirming_transition_index == n_transitions-1 and wheel_walking_transition_index == n_transitions -1:
-             print("Transitions ended")
-        else:
-            if state_machine.inTransition():
-                state_start_time = time.time_ns()
-            elif state_machine.getCurrState() == 1:
-                if time.time_ns() - state_start_time > squirming_transition_times[squirming_transition_index]:
-                    state_machine.switchState(2, timedelta(microseconds=time.time_ns()//1000))
-                    squirming_transition_index = (squirming_transition_index + 1) % n_transitions
-                    print("switching to wheel walking, transition index: ", squirming_transition_index)
-            elif state_machine.getCurrState() == 2:
-                if time.time_ns() - state_start_time > wheel_walking_transition_times[wheel_walking_transition_index]:
-                    state_machine.switchState(1, timedelta(microseconds=time.time_ns()//1000))
-                    wheel_walking_transition_index = (wheel_walking_transition_index + 1) % n_transitions
-                    print("switching to squirming, transition index: ", wheel_walking_transition_index)
+    gait_time = state_machine.getCurrGaitTime(timedelta(microseconds=(int)(time.time_ns()//1000)))
+    if not state_machine.inTransition():
+        if gait_switcher.ready(gait_time, curr_gait_index):
+            gait_index = 1 if curr_gait_index == 2 else 2
+            send_command(gait_index)
+            print("switching state to: ", gait_names[curr_gait_index])
+            
+            if gait_switcher.done:
+                print("TRANSITIONS DONE")
 
     # set bogie joint to 0 effort when squirming
-    if state_machine.getCurrState() == 1:
+    if state_machine.getCurrState() == 1 and not state_machine.inTransition():
         bogie_motor.disable_torque()
     else:
          bogie_motor.enable_torque()
@@ -131,7 +123,8 @@ def control_loop():
     wheels.set_speeds(wheelSpeeds)
 
     # log telem
-    write_telemetry(filename, start_time/1e9, steering_motor, bogie_motor, wheels, commands[stm_state_machine.Joint.TRANSITIONING], gait_names[curr_gait_index])
+    gait_or_transition_name = gait_names[state_machine.getCurrState()] if not state_machine.inTransition() else transition_names[transition_index]
+    write_telemetry(filename, start_time/1e9, steering_motor, bogie_motor, wheels, commands[stm_state_machine.Joint.TRANSITIONING], gait_or_transition_name)
 
     # wait for next control period
     end_time = time.time_ns()
@@ -140,7 +133,6 @@ def control_loop():
 
 # register keyboard callbacks
 def press(key):
-    global state_start_time, transitions_started
     if key == 'q':
         print("switching state to idle")
         send_command(0)
@@ -164,8 +156,7 @@ def press(key):
         send_command(6)
     elif key == 'z':
         send_command(1)
-        transitions_started = True
-        state_start_time = time.time_ns()
+        gait_switcher.begin()
         print("transitions started")
 
 listen_thread = threading.Thread(target=lambda: listen_keyboard(on_press=press, sequential=True, until='p'))

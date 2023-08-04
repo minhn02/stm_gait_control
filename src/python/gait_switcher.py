@@ -1,15 +1,17 @@
 import numpy as np
+from typing import List, Tuple
 
 class GaitSwitcher:
-    def __init__(self, gait_indexes: list[int], gait_periods: list[float], num_switches: int):
+    def __init__(self, gait_indexes: List[int], gait_periods: List[float], num_switches: int):
         self.has_scheduled_time = False
         self.scheduled_time = 0
         self.gait_times = {}
+        self.begin = False
         self.done = False
 
         for i in range(len(gait_indexes)):
-            switching_times = np.linspace(0, gait_periods[i], num_switches)
-            self.gait_times[gait_indexes] = switching_times
+            switching_times = np.linspace(5e8, gait_periods[i] - 5e8, num_switches).tolist()
+            self.gait_times[gait_indexes[i]] = switching_times
 
     def schedule_time(self, curr_state: int, curr_time: int):
         if curr_state in self.gait_times:
@@ -28,13 +30,17 @@ class GaitSwitcher:
                 
     def ready(self, gait_time: int, curr_state: int) -> bool:
         # find closest time in current gait to switch to
+        if not self.begin or self.done:
+            return False
+                
         if not self.has_scheduled_time:
             self.schedule_time(curr_state, gait_time)
             self.has_scheduled_time = True
         else:
             if gait_time >= self.scheduled_time:
+                self.has_scheduled_time = False
                 return True
         return False
     
-    def get_done(self):
-        return self.done
+    def begin_switching(self):
+        self.begin = True

@@ -37,6 +37,8 @@ class StateMachine {
 
     bool inTransition();
 
+    int64_t getCurrGaitTime(std::chrono::nanoseconds time);
+
     private:
     bool madeCommandGait_;
     bool inStartup_;

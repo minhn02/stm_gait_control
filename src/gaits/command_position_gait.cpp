@@ -11,8 +11,8 @@ CommandPositionGait::CommandPositionGait(int64_t t0, double currSteering, double
     steeringTraj_ = TrapezoidalTrajectory::TrapTraj<int64_t>(currSteering, desiredSteering, steering_velocity_, t0, steerTransientDuration_);
     bogieTraj_ = TrapezoidalTrajectory::TrapTraj<int64_t>(currBogie, desiredBogie, bogie_velocity_, t0, bogieTransientDuration_);
 
-    std::cout << "currSteering: " << currSteering << " desiredSteering: " << desiredSteering << std::endl;
-    std::cout << "currBogie: " << currBogie << " desiredBogie: " << desiredBogie << std::endl;
+    // std::cout << "currSteering: " << currSteering << " desiredSteering: " << desiredSteering << std::endl;
+    // std::cout << "currBogie: " << currBogie << " desiredBogie: " << desiredBogie << std::endl;
 
     period_ = std::max(steeringTraj_.duration(), bogieTraj_.duration());
     isFinished_ = false;
@@ -51,7 +51,7 @@ std::map<Joint, double> CommandPositionGait::run(std::chrono::nanoseconds time, 
     Eigen::VectorXd positions = evaluate(time);
     Eigen::VectorXd velocities = derivative(time)*1e9;
 
-    std::cout << "positions: " << positions(0) << " velocities: " << velocities(0) << std::endl;
+    // std::cout << "positions: " << positions(0) << " velocities: " << velocities(0) << std::endl;
 
     // calculate wheel speeds
     std::vector<double> wheelSpeeds = WheelController::calculateWheelSpeeds(positions(0), velocities(0));    

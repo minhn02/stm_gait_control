@@ -117,6 +117,14 @@ namespace StateMachine {
     bool StateMachine::inTransition() {
         return transitionStarted_;
     }
+
+    int64_t StateMachine::getCurrGaitTime(std::chrono::nanoseconds time) {
+        if (currState_->getPeriod().count() == 0) {
+            return 0;
+        } else {
+            return (time.count() - startTime_.count()) % currState_->getPeriod().count();
+        }
+    }
 }
 
 PYBIND11_MODULE(stm_state_machine, m) {
@@ -136,5 +144,6 @@ PYBIND11_MODULE(stm_state_machine, m) {
         .def("switchState", &StateMachine::StateMachine::switchState)
         .def("execute", &StateMachine::StateMachine::execute)
         .def("getCurrState", &StateMachine::StateMachine::getCurrState)
-        .def("inTransition", &StateMachine::StateMachine::inTransition);
+        .def("inTransition", &StateMachine::StateMachine::inTransition)
+        .def("getCurrGaitTime", &StateMachine::StateMachine::getCurrGaitTime);
 }

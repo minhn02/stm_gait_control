@@ -39,7 +39,6 @@ Eigen::VectorXd TransitionGait::evaluate(std::chrono::nanoseconds t) {
         case BEZIER:
             return curve_.evaluate(t.count());
         case BEZIER_WAYPOINT:
-            std::printf("evaluating spline at t: %li : %f \n", t.count(), spline_.evaluate(t.count())(0));
             return spline_.evaluate(t.count());
         default:
             return Eigen::VectorXd::Zero(1);
@@ -74,7 +73,6 @@ bool TransitionGait::isFinished(std::chrono::nanoseconds currTime) {
         case BEZIER:
             return curve_.isFinished(currTime.count());
         case BEZIER_WAYPOINT:
-            std::printf("waypoint transition not finished \n");
             return spline_.isFinished(currTime.count());
         default:
             return true;
