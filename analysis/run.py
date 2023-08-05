@@ -9,8 +9,8 @@ import vicon
 # Default to using this example data if no arguments are provided
 FALLBACK_ON_EXAMPLES = True
 REPO_ROOT = Path(__file__).parent.parent
-VICON_EXAMPLE_PATH = REPO_ROOT / "logs" / "7-23-naive" / "7-23-naive-1.dat"
-TELEM_EXAMPLE_PATH = REPO_ROOT / "logs" / "7-23-naive" / "7-23-naive-1.csv"
+VICON_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-4-bezierway" / "8-4-bezierway-2.dat"
+TELEM_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-4-bezierway" / "8-4-bezierway-2.csv"
 
 if __name__ == "__main__":
     try:

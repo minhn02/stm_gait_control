@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-BODY_OBJECT_NAME = "asterix_body"
-BOGIE_OBJECT_NAME = "asterix_bogie"
+BODY_OBJECT_NAME = "asterix_front"
+BOGIE_OBJECT_NAME = "asterix_back"
 
 
 def read_motion(path: Path) -> pd.DataFrame:
@@ -60,8 +60,8 @@ def read_motion(path: Path) -> pd.DataFrame:
 def update_body_names(df: pd.DataFrame):
     global BODY_OBJECT_NAME, BOGIE_OBJECT_NAME
 
-    body_pattern = re.compile("asterix_body.*_x")
-    bogie_pattern = re.compile("asterix_bogie.*_x")
+    body_pattern = re.compile("asterix_front.*_x")
+    bogie_pattern = re.compile("asterix_back.*_x")
 
     BODY_OBJECT_NAME = list(filter(body_pattern.match, df.columns))[0][:-2]
     BOGIE_OBJECT_NAME = list(filter(bogie_pattern.match, df.columns))[0][:-2]

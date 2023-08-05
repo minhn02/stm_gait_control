@@ -12,7 +12,7 @@ control_period = 0.02
 # switching logic
 n_transitions = 5
 squirming_period = 11066666666
-wheel_walking_period = 23066666666
+wheel_walking_period = 20000000000 #23066666666
 curr_gait_index = 1
 gait_switcher = GaitSwitcher([1, 2], [squirming_period, wheel_walking_period], n_transitions)
 
@@ -34,7 +34,7 @@ control_period = 0.02 #seconds
 
 gait_names = ["IDLE", "SQUIRM", "WHEEL_WALKING", "TRANSITION", "STARTUP", "INITIAL"]
 
-send_command(5)
+send_command(4)
 
 while True:
     start_time = time.time_ns()
@@ -47,8 +47,8 @@ while True:
             send_command(curr_gait_index)
             print("switching state to: ", gait_names[curr_gait_index])
             
-            if gait_switcher.done:
-                print("TRANSITIONS DONE")
+        if gait_switcher.done:
+            print("TRANSITIONS DONE")
 
     # execute state machine
     commands = state_machine.execute(timedelta(microseconds=time.time_ns()//1000), {})
