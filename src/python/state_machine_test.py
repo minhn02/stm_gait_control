@@ -30,7 +30,7 @@ def press(key):
 thread = threading.Thread(target=lambda: listen_keyboard(on_press=press, sequential=True))
 thread.start()
 
-control_period = 0.1 #seconds
+control_period = 0.02 #seconds
 
 gait_names = ["IDLE", "SQUIRM", "WHEEL_WALKING", "TRANSITION", "STARTUP", "INITIAL"]
 
@@ -52,7 +52,6 @@ while True:
 
     # execute state machine
     commands = state_machine.execute(timedelta(microseconds=time.time_ns()//1000), {})
-    print("steering joint velocity", commands[stm_state_machine.Joint.STEERING_JOINT_VEL])
 
     # send commands to rover
     # print(commands[stm_state_machine.Joint.STEERING_JOINT_VEL])

@@ -17,7 +17,7 @@ control_period = 0.02 #seconds
 steering_limit = 40*DEG_TO_RAD
 bogie_limit = 15*DEG_TO_RAD
 
-filename = "8-4-telem-testing2.csv"
+filename = "8-4-bezierway-2.csv"
 setup_log_file(filename)
 
 n_transitions = 5
@@ -97,8 +97,8 @@ def control_loop():
             send_command(gait_index)
             print("switching state to: ", gait_names[curr_gait_index])
             
-            if gait_switcher.done:
-                print("TRANSITIONS DONE")
+        if gait_switcher.done:
+            print("TRANSITIONS DONE")
 
     # set bogie joint to 0 effort when squirming
     if state_machine.getCurrState() == 1 and not state_machine.inTransition():
@@ -167,7 +167,7 @@ def press(key):
         send_command(6)
     elif key == 'z':
         send_command(1)
-        gait_switcher.begin()
+        gait_switcher.begin_switching()
         print("transitions started")
 
 listen_thread = threading.Thread(target=lambda: listen_keyboard(on_press=press, sequential=True, until='p'))
