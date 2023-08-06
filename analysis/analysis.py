@@ -1,5 +1,6 @@
 """Functions for reading and processing merged Vicon and telemetry data."""
 
+import math
 from typing import List, Tuple
 
 import color as color
@@ -269,8 +270,8 @@ def plot_motion(
                 )
 
                 # Get the orientation vector for each body
-                body_orientation = R.from_quat(body_quat).apply([0, 0, 8])
-                bogie_orientation = R.from_quat(bogie_quat).apply([0, 0, 8])
+                body_orientation = R.from_quat(body_quat).apply([8, 0, 0])
+                bogie_orientation = R.from_quat(bogie_quat).apply([8, 0, 0])
 
                 # Add arrows to the plot
                 ax.quiver(
@@ -421,7 +422,8 @@ def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
     rotation_change = np.dot(final_rotation, np.linalg.inv(initial_rotation))
 
     # Convert the rotation matrix to roll, pitch, and yaw angles
-    rotation_change = list(mat2euler(rotation_change, "sxyz"))
+    rotation_change = list(mat2euler(rotation_change, "rzyx"))
+
 
     return displacement + rotation_change
 
@@ -432,3 +434,159 @@ def summarize_pose_changes(df: pd.DataFrame) -> List[List[float]]:
     for transition in transitions:
         res.append(calculate_transition_pose_change(transition))
     return res
+
+
+def plot_pose_changes(
+    df: pd.DataFrame, title: str, show_transitions: bool = True
+) -> Figure:
+    initial_quaternion = [
+        df[f"{BODY_OBJECT_NAME}_q1"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q2"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q3"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q4"].iloc[0],
+    ]
+
+    initial_rotation = quat2mat(initial_quaternion)
+
+    def add_orientation(row):
+        quaternion = [
+            row[f"{BODY_OBJECT_NAME}_q1"],
+            row[f"{BODY_OBJECT_NAME}_q2"],
+            row[f"{BODY_OBJECT_NAME}_q3"],
+            row[f"{BODY_OBJECT_NAME}_q4"],
+        ]
+        rotation = quat2mat(quaternion)
+        rotation_change = np.dot(rotation, np.linalg.inv(initial_rotation))
+        (
+            row[f"{BODY_OBJECT_NAME}_roll"],
+            row[f"{BODY_OBJECT_NAME}_pitch"],
+            row[f"{BODY_OBJECT_NAME}_yaw"],
+        ) = mat2euler(rotation_change, "rzyx")
+
+        row[f"{BODY_OBJECT_NAME}_heading"] = row[f"{BODY_OBJECT_NAME}_yaw"] - (
+            row["hebi_steer_pos"] / 2 - df["hebi_steer_pos"].iloc[0] / 2
+        )
+
+        # row[f"{BODY_OBJECT_NAME}_roll"] -= row["hebi_steer_pos"] / 2
+
+        return row
+
+    df = df.apply(add_orientation, axis=1)
+
+    # Create a new figure and three subplots
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True)
+    if matplotlib.rcParams["text.usetex"]:
+        fig.suptitle(
+            r"\Large{\textbf{Pose Changes - Body}}" "\n" r"\small{" + title + "}"
+        )
+    else:
+        fig.suptitle(f"Pose Changes - Body\n({title})")
+
+    # Plot the data in each subplot
+    ax1.plot(
+        df["time"],
+        df[f"{BODY_OBJECT_NAME}_roll"].astype(float).apply(math.degrees),
+        linewidth=0.7,
+    )
+    ax2.plot(
+        df["time"],
+        df[f"{BODY_OBJECT_NAME}_pitch"].astype(float).apply(math.degrees),
+        linewidth=0.7,
+    )
+    ax3.plot(
+        df["time"],
+        df[f"{BODY_OBJECT_NAME}_yaw"].astype(float).apply(math.degrees),
+        linewidth=0.7,
+    )
+    ax4.plot(
+        df["time"],
+        df[f"{BODY_OBJECT_NAME}_heading"].astype(float).apply(math.degrees),
+        linewidth=0.7,
+    )
+
+    # Highlight transitions
+    if show_transitions:
+        transitions, gaits = get_transitions(df)
+        for transition in transitions:
+            ax1.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_roll"]
+                .astype(float)
+                .apply(math.degrees),
+                color="red",
+            )
+            ax2.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_pitch"]
+                .astype(float)
+                .apply(math.degrees),
+                color="red",
+            )
+            ax3.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_yaw"].astype(float).apply(math.degrees),
+                color="red",
+            )
+            ax4.plot(
+                transition["time"],
+                transition[f"{BODY_OBJECT_NAME}_heading"]
+                .astype(float)
+                .apply(math.degrees),
+                color="red",
+            )
+        for gait in gaits:
+            try:
+                ax1.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_roll"].astype(float).apply(math.degrees),
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+                ax2.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_pitch"].astype(float).apply(math.degrees),
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+                ax3.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_yaw"].astype(float).apply(math.degrees),
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+                ax4.plot(
+                    gait["time"],
+                    gait[f"{BODY_OBJECT_NAME}_heading"]
+                    .astype(float)
+                    .apply(math.degrees),
+                    color=gait_colors[gait["gait_name"].iloc[0]]["body"],
+                )
+            except KeyError:
+                # This happens when "gait_name" does not have a defined color
+                pass
+
+    # Set the labels and limits
+    ax4.set_xlabel("Time (s)")
+    ax1.set_ylabel("Roll (deg)")
+    ax2.set_ylabel("Pitch (deg)")
+    ax3.set_ylabel("Yaw (deg)")
+    ax4.set_ylabel("Heading (deg)")
+
+    ax1.set_xlim(df["time"].iloc[0], df["time"].iloc[-1])
+
+    for ax in (ax1, ax2, ax3, ax4):
+        ax.grid(True, which="both", color="lightgray", linestyle="--", linewidth="0.5")
+        ax.minorticks_on()
+
+    return fig
+
+
+def plot_hebi_steer_pos(df: pd.DataFrame) -> Figure:
+    """Plot the steer position of the HEBI actuator (for sanity checking)."""
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_title("HEBI Steer Position")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Steer Position (deg)")
+    ax.plot(df["time"], df[f"hebi_steer_pos"].astype(float).apply(math.degrees))
+    ax.set_xlim(df["time"].iloc[0], df["time"].iloc[-1])
+    ax.grid(True, which="both", color="lightgray", linestyle="--", linewidth="0.5")
+    ax.minorticks_on()
+    return fig

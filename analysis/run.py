@@ -83,3 +83,7 @@ if __name__ == "__main__":
     print()
     console = Console()
     console.print(table)
+
+    analysis.plot_pose_changes(transformed_df, f"{vicon_path.stem}")
+    analysis.plot_hebi_steer_pos(transformed_df)
+    plt.show()
