@@ -17,12 +17,12 @@ control_period = 0.02 #seconds
 steering_limit = 40*DEG_TO_RAD
 bogie_limit = 15*DEG_TO_RAD
 
-filename = "8-4-bezierway-2.csv"
+filename = "8-5-bezierway-heading-3.csv"
 setup_log_file(filename)
 
 n_transitions = 5
 squirming_period = 11066666666
-wheel_walking_period = 23066666666
+wheel_walking_period = 20000000000
 
 #initialize state machine with current time in nanoseconds (have to convert to microseconds for timedelta support)
 state_machine = stm_state_machine.StateMachine(timedelta(microseconds=time.time_ns()/1000))

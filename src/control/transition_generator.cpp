@@ -76,25 +76,25 @@ namespace TransitionGenerator {
         double duration_cost = (double)duration/1e9;
 
         // calculate displacement caused by taking trajectory
-        // size_t num_trajectory_points = 100;
-        // std::vector<double> beta_list(num_trajectory_points);
-        // double step = x[1] / (num_trajectory_points - 1);
-        // for (size_t i = 0; i < num_trajectory_points; i++) {
-        //     int64_t trajectory_time = t1 + step*i;
-        //     beta_list[i] = curve.evaluate(trajectory_time)(0);
-        // }
+        size_t num_trajectory_points = 100;
+        std::vector<double> beta_list(num_trajectory_points);
+        double step = x[1] / (num_trajectory_points - 1);
+        for (size_t i = 0; i < num_trajectory_points; i++) {
+            int64_t trajectory_time = t1 + step*i;
+            beta_list[i] = curve.evaluate(trajectory_time)(0);
+        }
 
-        // Vector3d gait1_coordinate = g1->displacement(t1_ns);
-        // Vector3d gait2_coordinate = g2->displacement(t2_ns);
-        // std::vector<double> trajectory_displacement = RoverTrajectory::calculate_rover_displacement(beta_list, step, {gait1_coordinate(0), gait1_coordinate(1), gait1_coordinate(2)}, P0(0)*(180.0/M_PI));
-        // Vector3d trajectory_displacement_vec; trajectory_displacement_vec << trajectory_displacement[0], trajectory_displacement[1], trajectory_displacement[2];
+        Vector3d gait1_coordinate = g1->displacement(t1_ns);
+        Vector3d gait2_coordinate = g2->displacement(t2_ns);
+        std::vector<double> trajectory_displacement = RoverTrajectory::calculate_rover_displacement(beta_list, step, {gait1_coordinate(0), gait1_coordinate(1), gait1_coordinate(2)}, P0(0)*(180.0/M_PI));
+        Vector3d trajectory_displacement_vec; trajectory_displacement_vec << trajectory_displacement[0], trajectory_displacement[1], trajectory_displacement[2];
 
-        // Vector3d closest_point = RoverTrajectory::find_closest_waypoint(trajectory_displacement_vec, gait2_coordinate);
-        // double cartesian_trajectory_diff = (closest_point - trajectory_displacement_vec).norm();
+        Vector3d closest_point = RoverTrajectory::find_closest_waypoint(trajectory_displacement_vec, gait2_coordinate);
+        double cartesian_trajectory_diff = (closest_point - trajectory_displacement_vec).norm();
 
-        // std::cout << "cartesian trajectory diff: " << cartesian_trajectory_diff << "avgVel: " << avgVel << ", duration_cost: " << duration_cost << std::endl;
+        std::cout << "cartesian trajectory diff: " << cartesian_trajectory_diff << "avgVel: " << avgVel << ", duration_cost: " << duration_cost << std::endl;
 
-        return avgVel + duration_cost;
+        return avgVel + duration_cost + 20*cartesian_trajectory_diff;
     }
 
     Bezier::Curve<int64_t> findOptimalCubicCurve(Gait::Gait *gait1, Gait::Gait *gait2, std::chrono::nanoseconds startTime, std::chrono::nanoseconds t1, std::chrono::nanoseconds *t_t, std::chrono::nanoseconds *t_2) {
@@ -102,17 +102,11 @@ namespace TransitionGenerator {
         double period_d = (double) gait2->getPeriod().count();
 
         std::cout.precision(20);
-        std::cout << "t1: " << t1.count() << ", period: " << gait2->getPeriod().count() << std::endl;
-        std::cout << "t1_d: " << t1_d << ", period_d: " << period_d << std::endl;
 
         opt optimization = opt(LN_SBPLX, 2);
         optimization.set_lower_bounds({t1_d + 5e8, 0});
         //TODO robust way to set upper bound?
         optimization.set_upper_bounds({t1_d + 10e9, period_d});
-
-        //add buffer to lower bound to prevent negative durations from casting
-        std::cout << "setting lower bounds: {" << t1_d + 5e8 << ", " << 0 << "}" << std::endl;
-        std::cout << "setting upper bounds: {" << t1_d + 10e9 << ", " << period_d << "}" << std::endl;
 
         optimization.set_maxtime(0.5);
 
@@ -273,7 +267,7 @@ namespace TransitionGenerator {
 
         std::cout << "final_diff: " << final_diff << " cartesian_trajectory_diff: " << cartesian_trajectory_diff << " bezier traj diff: " << bezier_traj_penalty << " acceleration penalty: " << acceleration_penalty << " time penalty: " << time_penalty << std::endl;
         
-        obj_value = 200*final_diff + bezier_traj_penalty + 5*acceleration_penalty + 4*time_penalty + cartesian_trajectory_diff;
+        obj_value = 200*final_diff + bezier_traj_penalty + 5*acceleration_penalty + 4*time_penalty + 20*cartesian_trajectory_diff;
 
         return obj_value;
     }
@@ -352,7 +346,7 @@ namespace TransitionGenerator {
 
         std::cout << "final_diff: " << 200*final_diff << " cartesian_trajectory_diff: " << cartesian_trajectory_diff << " linear traj diff: " << linear_traj_diff << " acceleration penalty: " << 5*acceleration_penalty << " time penalty: " << 4*time_penalty << std::endl;
         
-        obj_value = 200*final_diff + linear_traj_diff + 5*acceleration_penalty + 4*time_penalty + cartesian_trajectory_diff;
+        obj_value = 200*final_diff + linear_traj_diff + 5*acceleration_penalty + 4*time_penalty + 20*cartesian_trajectory_diff;
 
         return obj_value;
     }
@@ -418,7 +412,6 @@ namespace TransitionGenerator {
         waypoints[0] = x0;
         for (int i = 1; i < num_waypoints+1; i++) {
             waypoints[i] << guess[2*i], guess[1+2*i];
-            std::printf("Waypoint %i: {%f, %f} \n", i, waypoints[i](0), waypoints[i](1));
         }
 
         std::chrono::nanoseconds tt((int64_t)guess[1]);
