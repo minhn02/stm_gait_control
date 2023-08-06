@@ -424,3 +424,11 @@ def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
     rotation_change = list(mat2euler(rotation_change, "sxyz"))
 
     return displacement + rotation_change
+
+
+def summarize_pose_changes(df: pd.DataFrame) -> List[List[float]]:
+    transitions, gaits = get_transitions(df)
+    res = []
+    for transition in transitions:
+        res.append(calculate_transition_pose_change(transition))
+    return res
