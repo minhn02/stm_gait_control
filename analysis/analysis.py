@@ -51,7 +51,7 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
     the body object offset by the steering angle."""
 
     # Define the desired co-ordinate system offset from the body object initial orientation
-    initial_body_angle = [0.0, 0.0, df["hebi_steer_pos"].iloc[0] / 2]
+    initial_yaw = df["hebi_steer_pos"].iloc[0] / 2
 
     # Extract the initial position and quaternion values
     initial_body_position = (
@@ -79,14 +79,26 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
         .values
     )
 
-    # Convert initial offset Euler angles to a quaternion representing the offset
-    offset_quaternion = R.from_euler("xyz", initial_body_angle).as_quat()
+    # find transformation matrix from vicon origin to desired origin: [x: 0, y: 0, z: 0], [r: 0, p: 0, y: steering_angle/2]
+    vicon_R_body0 = R.from_quat(initial_body_quaternion).as_matrix()
+    vicon_T_body0 = initial_body_position
+
+    vicon_H_body0 = np.eye(4)
+    vicon_H_body0[:3, :3] = vicon_R_body0
+    vicon_H_body0[:3, 3] = vicon_T_body0
+
+    desired_R_body0 = R.from_euler("z", initial_yaw).as_matrix()
+    desired_H_body0 = np.eye(4)
+    desired_H_body0[:3, :3] = desired_R_body0
+
+    desired_H_vicon = desired_H_body0 @ np.linalg.inv(vicon_H_body0)
+
 
     # Apply the transformation to each row of the dataframe
     def transform_row(row):
         for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
             position = np.array(
-                [row[f"{body_name}_x"], row[f"{body_name}_y"], row[f"{body_name}_z"]]
+                [row[f"{body_name}_x"], row[f"{body_name}_y"], row[f"{body_name}_z"], 1]
             )
             quaternion = np.array(
                 [
@@ -97,30 +109,25 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
                 ]
             )
 
-            # Translate position to the initial position
-            position -= initial_body_position
+            vicon_R_bodyt = R.from_quat(quaternion).as_matrix()
+            vicon_T_bodyt = position.T
 
-            # Apply the offset to the initial quaternion
-            initial_quaternion_with_offset = R.from_quat(
-                initial_body_quaternion
-            ) * R.from_quat(offset_quaternion)
+            vicon_H_bodyt = np.eye(4)
+            vicon_H_bodyt[:3, :3] = vicon_R_bodyt
+            vicon_H_bodyt[:, -1] = vicon_T_bodyt
 
-            # Calculate rotation matrix from the relative quaternion
-            relative_quaternion = (
-                R.from_quat(quaternion) * initial_quaternion_with_offset.inv()
-            )
-            rotation_matrix = initial_quaternion_with_offset.as_matrix()
-
-            # Apply the rotation to the position
-            transformed_position = np.dot(rotation_matrix, position)
+            desired_H_bodyt = desired_H_vicon @ vicon_H_bodyt
+            desired_R_bodyt = desired_H_bodyt[:3, :3]
+            transformed_position = desired_H_bodyt[:,-1]
+            transformed_quaternion = R.from_matrix(desired_R_bodyt).as_quat()
 
             row[f"{body_name}_x"] = transformed_position[0]
             row[f"{body_name}_y"] = transformed_position[1]
             row[f"{body_name}_z"] = transformed_position[2]
-            row[f"{body_name}_q1"] = relative_quaternion.as_quat()[0]
-            row[f"{body_name}_q2"] = relative_quaternion.as_quat()[1]
-            row[f"{body_name}_q3"] = relative_quaternion.as_quat()[2]
-            row[f"{body_name}_q4"] = relative_quaternion.as_quat()[3]
+            row[f"{body_name}_q1"] = transformed_quaternion[0]
+            row[f"{body_name}_q2"] = transformed_quaternion[1]
+            row[f"{body_name}_q3"] = transformed_quaternion[2]
+            row[f"{body_name}_q4"] = transformed_quaternion[3]
 
         return row
 

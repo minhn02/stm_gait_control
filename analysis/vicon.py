@@ -56,6 +56,10 @@ def read_motion(path: Path) -> pd.DataFrame:
     update_body_names(df_motion)
     return df_motion
 
+def offset_vicon_data_time(df: pd.DataFrame, time_offset: float) -> pd.DataFrame:
+    df["time"] = df["time"] + time_offset
+    return df
+
 
 def update_body_names(df: pd.DataFrame):
     global BODY_OBJECT_NAME, BOGIE_OBJECT_NAME

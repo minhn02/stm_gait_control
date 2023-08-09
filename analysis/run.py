@@ -13,8 +13,11 @@ from rich.table import Table
 # Default to using this example data if no arguments are provided
 FALLBACK_ON_EXAMPLES = True
 REPO_ROOT = Path(__file__).parent.parent
-VICON_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-4-bezierway" / "8-4-bezierway-2.dat"
-TELEM_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-4-bezierway" / "8-4-bezierway-2.csv"
+VICON_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-4-bezierway" / "8-4-bezierway-1.dat"
+TELEM_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-4-bezierway" / "8-4-bezierway-1.csv"
+
+# offset vicon time in 8-5 data due to improper epoch synching
+eight_five_time_offset = 1691279982.08448 - 1691280146.5914912
 
 if __name__ == "__main__":
     try:
@@ -34,6 +37,7 @@ if __name__ == "__main__":
             raise err
 
     vicon_df = vicon.read_motion(vicon_path)
+    # vicon_df = vicon.offset_vicon_data_time(vicon_df, eight_five_time_offset)
     telem_df = telemetry.read_telem(telem_path)
     merged_df = analysis.merge_vicon_telemetry(telem_df, vicon_df)
     transformed_df = analysis.transform_origin(merged_df)
