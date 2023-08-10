@@ -1,54 +1,166 @@
 import math
+import re
 import sys
 from pathlib import Path
+from typing import Callable, List, Tuple
 
 import analysis
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import telemetry
 import vicon
 from rich import print
 from rich.console import Console
 from rich.table import Table
 
-# Default to using this example data if no arguments are provided
-FALLBACK_ON_EXAMPLES = True
 REPO_ROOT = Path(__file__).parent.parent
-VICON_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-5-bezierway-heading" / "8-5-bezierway-heading-2.dat"
-TELEM_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-5-bezierway-heading" / "8-5-bezierway-heading-2.csv"
+RESULTS_PATH = REPO_ROOT / "results"
 
-# offset vicon time in 8-5 data due to improper epoch synching
-eight_five_time_offset = 1691279982.08448 - 1691280146.5914912
+SUMMARY_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-5-bezierway-heading"
 
-if __name__ == "__main__":
-    try:
-        if len(sys.argv) != 3:
-            raise ValueError(
-                "Two file path arguments should be provided: vicon and telemetry data files."
-            )
+LOGPAIR_EXAMPLE_PATH_BASE = (
+    REPO_ROOT / "logs" / "8-5-bezierway-heading" / "8-5-bezierway-heading-2"
+)
+VICON_EXAMPLE_PATH = LOGPAIR_EXAMPLE_PATH_BASE.with_suffix(".dat")
+TELEM_EXAMPLE_PATH = LOGPAIR_EXAMPLE_PATH_BASE.with_suffix(".csv")
 
-        vicon_path = Path(sys.argv[1])
-        telem_path = Path(sys.argv[2])
+DEFAULT_TO_SUMMARY = False
 
-    except ValueError as err:
-        if FALLBACK_ON_EXAMPLES:
-            vicon_path = VICON_EXAMPLE_PATH
-            telem_path = TELEM_EXAMPLE_PATH
-        else:
-            raise err
+# offset vicon time in 8-5 data due to improper epoch synching (keys are regex patterns)
+VICON_OFFSETS = {
+    "^8-5": 1691279982.08448 - 1691280146.5914912,
+}
+
+
+def apply_vicon_time_offset(vicon_path: Path, vicon_df: pd.DataFrame) -> pd.DataFrame:
+    """Offset vicon data if vicon path stem matches the regex pattern of a time offset."""
+
+    for key, value in VICON_OFFSETS.items():
+        if re.match(key, vicon_path.stem):
+            vicon_df = vicon.offset_vicon_data_time(vicon_df, value)
+            return vicon_df
+
+
+def preprocess_data(
+    vicon_path: Path, telem_path: Path, plot_merged: bool = False
+) -> pd.DataFrame:
+    """Read, offset, merge, and transform a pair of vicon and telemetry datafiles.
+    Return the transformed dataframe."""
 
     vicon_df = vicon.read_motion(vicon_path)
-    vicon_df = vicon.offset_vicon_data_time(vicon_df, eight_five_time_offset)
+    vicon_df = apply_vicon_time_offset(vicon_path, vicon_df)
     telem_df = telemetry.read_telem(telem_path)
     merged_df = analysis.merge_vicon_telemetry(telem_df, vicon_df)
-    # transformed_df = analysis.transform_origin(merged_df)
     transformed_df = analysis.flatten_along_x(merged_df)
 
-    analysis.plot_motion(merged_df, "Original Data", show_arrows=True)
-    analysis.plot_motion_2d(merged_df, "Original Data")
+    if plot_merged:
+        analysis.plot_motion(merged_df, "Original Data", show_arrows=True)
+        analysis.plot_motion_2d(merged_df, "Original Data")
+
+    return transformed_df
+
+
+def preprocess_dir(dir_path: Path) -> List[pd.DataFrame]:
+    """Find matching pairs of telemetry and vicon datafiles in a directory and preprocess them.
+    Return a list of dataframes, one for each file pair."""
+
+    # Find matching pairs of telemetry and vicon datafiles
+    csv_files = [f for f in dir_path.iterdir() if f.suffix == ".csv"]
+    log_file_pairs = [
+        (
+            next(
+                f
+                for f in dir_path.iterdir()
+                if f.suffix == ".dat" and f.stem == csv.stem
+            ),
+            csv,
+        )
+        for csv in csv_files
+    ]
+    transformed_dfs = [
+        preprocess_data(vicon_path, telem_path)
+        for vicon_path, telem_path in log_file_pairs
+    ]
+    return transformed_dfs
+
+
+class Metric:
+    """A metric to be calculated on a transition dataframe."""
+
+    def __init__(
+        self, name: str, fnc: Callable[[pd.DataFrame], float | Tuple[float, ...]]
+    ) -> None:
+        self.name = name
+        self.fnc = fnc
+        self.vals: List[float | Tuple[float, ...]] = []
+
+
+def summarise_runs(dir_path: Path, results_dir_path: Path):
+    """Summarise the results of a directory of runs. Save results to csv files."""
+
+    transformed_dfs = preprocess_dir(dir_path)
+
+    metrics = [
+        Metric("duration_s", analysis.calc_transition_duration),
+        Metric("power_wheels_W", analysis.calc_transition_power_wheels),
+        Metric("power_hebis_W", analysis.calc_transition_power_hebis),
+        Metric("pos_change_xyz_m", analysis.calc_transition_pos_change_xyz),
+    ]
+
+    for transformed_df in transformed_dfs:
+        transitions, gaits = analysis.get_transitions(transformed_df)
+        for transition_df in transitions:
+            for metric in metrics:
+                metric.vals.append(metric.fnc(transition_df))
+
+    all_results_df = pd.DataFrame()
+
+    summary_results = []
+    for metric in metrics:
+        all_results_df[metric.name] = metric.vals
+
+        if isinstance(metric.vals[0], tuple):
+            vals = np.linalg.norm(metric.vals, axis=1)
+            name = f"{metric.name}_norm"
+        else:
+            vals = metric.vals
+            name = metric.name
+
+        summary_results.append(
+            {
+                "name": name,
+                "mean": np.mean(vals),
+                "std": np.std(vals),
+                "min": np.min(vals),
+                "max": np.max(vals),
+            }
+        )
+
+    summary_results_df = pd.DataFrame(summary_results)
+
+    # Save results to csvs
+    all_results_path = results_dir_path / f"{dir_path.name}_all.csv"
+    all_results_df.to_csv(all_results_path, index=False)
+    summary_results_path = results_dir_path / f"{dir_path.name}_summary.csv"
+    summary_results_df.to_csv(summary_results_path, index=False)
+
+
+def run_directory_summary(dir_path: Path):
+    if dir_path.is_dir():
+        summarise_runs(dir_path, RESULTS_PATH)
+    else:
+        raise FileNotFoundError(f"{dir_path} is not a directory.")
+
+
+def run_log_pair_summary(vicon_path: Path, telem_path: Path):
+    if not vicon_path.is_file() or not telem_path.is_file():
+        raise FileNotFoundError(f"{vicon_path} or {telem_path} is not a file.")
+
+    transformed_df = preprocess_data(vicon_path, telem_path, plot_merged=True)
 
     analysis.plot_motion(transformed_df, "Transformed Data", show_arrows=True)
     analysis.plot_motion_2d(transformed_df, "Transformed Data")
-
     plt.show()
 
     pose_changes = analysis.summarize_pose_changes(transformed_df)
@@ -92,3 +204,22 @@ if __name__ == "__main__":
     analysis.plot_pose_changes(transformed_df, f"{vicon_path.stem}")
     analysis.plot_hebi_steer_pos(transformed_df)
     plt.show()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        run_directory_summary(Path(sys.argv[1]))
+
+    elif len(sys.argv) == 3:
+        run_log_pair_summary(Path(sys.argv[1]), Path(sys.argv[2]))
+
+    elif len(sys.argv) == 1:
+        if DEFAULT_TO_SUMMARY:
+            run_directory_summary(SUMMARY_EXAMPLE_PATH)
+        else:
+            run_log_pair_summary(VICON_EXAMPLE_PATH, TELEM_EXAMPLE_PATH)
+
+    else:
+        raise ValueError(
+            "Only one directory path argument or two file path arguments should be provided."
+        )

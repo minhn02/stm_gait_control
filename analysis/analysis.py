@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
+from scipy import integrate
 from scipy.spatial.transform import Rotation as R
 from sklearn.linear_model import LinearRegression
 from vicon import BODY_OBJECT_NAME, BOGIE_OBJECT_NAME
@@ -17,6 +18,8 @@ gait_colors = {
     "WHEEL_WALKING": color.gait_wheel_walking,
     "SQUIRM": color.gait_squirm,
 }
+
+HEBI_NAMES = ["hebi_steer", "hebi_bogie"]  # From headings in telemetry data
 
 
 def merge_vicon_telemetry(
@@ -722,3 +725,55 @@ def plot_hebi_steer_pos(df: pd.DataFrame) -> Figure:
             color="red",
         )
     return fig
+
+
+def calc_transition_duration(df: pd.DataFrame) -> float:
+    return df["time"].iloc[-1] - df["time"].iloc[0]
+
+
+def calc_transition_power_wheels(df: pd.DataFrame) -> float:
+    duration_s = calc_transition_duration(df)
+
+    wheels_energy_J = []
+    for wheel_num in range(4):
+        wheel_current_A = df[f"wheel{wheel_num+1}_cur"] / 1000
+        wheel_voltage_V = df[f"wheel{wheel_num+1}_vol"]
+        wheel_power_W = wheel_current_A * wheel_voltage_V
+        wheel_energy_J = integrate.trapezoid(wheel_power_W, df["time"])
+        wheels_energy_J.append(wheel_energy_J)
+    total_wheels_energy_J = np.sum(wheels_energy_J)
+
+    return total_wheels_energy_J / duration_s
+
+
+def calc_transition_power_hebis(df: pd.DataFrame) -> float:
+    duration_s = calc_transition_duration(df)
+
+    total_hebis_energy_J = 0
+    for hebi_name in HEBI_NAMES:
+        hebi_current_A = df[f"{hebi_name}_cur_motor"]
+        hebi_voltage_V = df[f"{hebi_name}_vol"]
+        hebi_power_W = hebi_current_A * hebi_voltage_V
+        hebi_energy_J = integrate.trapezoid(hebi_power_W, df["time"])
+        total_hebis_energy_J += hebi_energy_J
+
+    return total_hebis_energy_J / duration_s
+
+
+def calc_transition_pos_change_xyz(df: pd.DataFrame) -> Tuple[float, float, float]:
+    initial_pos = np.array(
+        [
+            df[f"{BODY_OBJECT_NAME}_x"].iloc[0] / 1000,
+            df[f"{BODY_OBJECT_NAME}_y"].iloc[0] / 1000,
+            df[f"{BODY_OBJECT_NAME}_z"].iloc[0] / 1000,
+        ]
+    )
+
+    final_pos = np.array(
+        [
+            df[f"{BODY_OBJECT_NAME}_x"].iloc[-1] / 1000,
+            df[f"{BODY_OBJECT_NAME}_y"].iloc[-1] / 1000,
+            df[f"{BODY_OBJECT_NAME}_z"].iloc[-1] / 1000,
+        ]
+    )
+    return tuple(final_pos - initial_pos)
