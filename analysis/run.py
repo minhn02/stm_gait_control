@@ -1,6 +1,7 @@
 import math
 import re
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Callable, List, Tuple, Union
 
@@ -16,6 +17,7 @@ from rich.table import Table
 
 REPO_ROOT = Path(__file__).parent.parent
 RESULTS_PATH = REPO_ROOT / "results"
+LOGS_PATH = REPO_ROOT / "logs"
 
 SUMMARY_EXAMPLE_PATH = REPO_ROOT / "logs" / "8-5-bezierway-heading"
 
@@ -25,7 +27,10 @@ LOGPAIR_EXAMPLE_PATH_BASE = (
 VICON_EXAMPLE_PATH = LOGPAIR_EXAMPLE_PATH_BASE.with_suffix(".dat")
 TELEM_EXAMPLE_PATH = LOGPAIR_EXAMPLE_PATH_BASE.with_suffix(".csv")
 
-DEFAULT_TO_SUMMARY = False
+# Enum for each type of analysis
+ANALYSIS_TYPE = Enum("ANALYSIS_TYPE", "LOG_PAIR DIR_SUMMARY ALL_SUMMARIES")
+
+DEFAULT_ANALYSIS = ANALYSIS_TYPE.ALL_SUMMARIES
 
 # offset vicon time in 8-5 data due to improper epoch synching (keys are regex patterns)
 VICON_OFFSETS = {
@@ -153,6 +158,20 @@ def run_directory_summary(dir_path: Path):
         raise FileNotFoundError(f"{dir_path} is not a directory.")
 
 
+def run_all_directory_summaries():
+    for dir_path in LOGS_PATH.iterdir():
+        if dir_path.is_dir():
+            # check dir_path has csv and dat files
+            csv_files = [f for f in dir_path.iterdir() if f.suffix == ".csv"]
+            dat_files = [f for f in dir_path.iterdir() if f.suffix == ".dat"]
+            if dir_path.stem.startswith("8-4"):
+                # Error when mergin 8-4-bezierway, so have excluded 8-4 files for now
+                continue
+            if len(csv_files) > 0 and len(dat_files) > 0:
+                print(f"Summarising {dir_path.name}")
+                summarise_runs(dir_path, RESULTS_PATH)
+
+
 def run_log_pair_summary(vicon_path: Path, telem_path: Path):
     if not vicon_path.is_file() or not telem_path.is_file():
         raise FileNotFoundError(f"{vicon_path} or {telem_path} is not a file.")
@@ -214,10 +233,17 @@ if __name__ == "__main__":
         run_log_pair_summary(Path(sys.argv[1]), Path(sys.argv[2]))
 
     elif len(sys.argv) == 1:
-        if DEFAULT_TO_SUMMARY:
-            run_directory_summary(SUMMARY_EXAMPLE_PATH)
-        else:
+        if DEFAULT_ANALYSIS == ANALYSIS_TYPE.LOG_PAIR:
             run_log_pair_summary(VICON_EXAMPLE_PATH, TELEM_EXAMPLE_PATH)
+
+        elif DEFAULT_ANALYSIS == ANALYSIS_TYPE.DIR_SUMMARY:
+            run_directory_summary(SUMMARY_EXAMPLE_PATH)
+
+        elif DEFAULT_ANALYSIS == ANALYSIS_TYPE.ALL_SUMMARIES:
+            run_all_directory_summaries()
+
+        else:
+            raise ValueError(f"Invalid default analysis type: {DEFAULT_ANALYSIS}")
 
     else:
         raise ValueError(
