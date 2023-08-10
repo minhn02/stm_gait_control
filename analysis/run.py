@@ -2,7 +2,7 @@ import math
 import re
 import sys
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Union
 
 import analysis
 import matplotlib.pyplot as plt
@@ -89,11 +89,11 @@ class Metric:
     """A metric to be calculated on a transition dataframe."""
 
     def __init__(
-        self, name: str, fnc: Callable[[pd.DataFrame], float | Tuple[float, ...]]
+        self, name: str, fnc: Callable[[pd.DataFrame], Union[float, Tuple[float, ...]]]
     ) -> None:
         self.name = name
         self.fnc = fnc
-        self.vals: List[float | Tuple[float, ...]] = []
+        self.vals: List[Union[float, Tuple[float, ...]]] = []
 
 
 def summarise_runs(dir_path: Path, results_dir_path: Path):
