@@ -11,8 +11,6 @@ import pandas as pd
 from matplotlib.figure import Figure
 from scipy.spatial.transform import Rotation as R
 from sklearn.linear_model import LinearRegression
-from transforms3d.euler import mat2euler
-from transforms3d.quaternions import quat2mat
 from vicon import BODY_OBJECT_NAME, BOGIE_OBJECT_NAME
 
 gait_colors = {
@@ -94,7 +92,6 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
 
     desired_H_vicon = desired_H_body0 @ np.linalg.inv(vicon_H_body0)
 
-
     # Apply the transformation to each row of the dataframe
     def transform_row(row):
         for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
@@ -119,7 +116,7 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
 
             desired_H_bodyt = desired_H_vicon @ vicon_H_bodyt
             desired_R_bodyt = desired_H_bodyt[:3, :3]
-            transformed_position = desired_H_bodyt[:,-1]
+            transformed_position = desired_H_bodyt[:, -1]
             transformed_quaternion = R.from_matrix(desired_R_bodyt).as_quat()
 
             row[f"{body_name}_x"] = transformed_position[0]
@@ -136,23 +133,34 @@ def transform_origin(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_transformed
 
-def flatten_along_x(df: pd.DataFrame) -> pd.DataFrame:
-    pose_data = [df[f"{BODY_OBJECT_NAME}_x"].values, df[f"{BODY_OBJECT_NAME}_y"].values, df[f"{BODY_OBJECT_NAME}_z"].values]
 
-    reg = LinearRegression().fit( pose_data[0].reshape(-1, 1), pose_data[1] )
-    correction_rot_matrix = R.from_rotvec( np.arctan( reg.coef_ )*np.array([ 0, 0, 1 ]) ).as_matrix()
-    
+def flatten_along_x(df: pd.DataFrame) -> pd.DataFrame:
+    pose_data = [
+        df[f"{BODY_OBJECT_NAME}_x"].values,
+        df[f"{BODY_OBJECT_NAME}_y"].values,
+        df[f"{BODY_OBJECT_NAME}_z"].values,
+    ]
+
+    reg = LinearRegression().fit(pose_data[0].reshape(-1, 1), pose_data[1])
+    correction_rot_matrix = R.from_rotvec(
+        np.arctan(reg.coef_) * np.array([0, 0, 1])
+    ).as_matrix()
+
     def transform_row(row):
         for body_name in [BODY_OBJECT_NAME, BOGIE_OBJECT_NAME]:
             position = np.array(
-                [row[f"{body_name}_x"], row[f"{body_name}_y"], row[f"{body_name}_z"], ]
+                [
+                    row[f"{body_name}_x"],
+                    row[f"{body_name}_y"],
+                    row[f"{body_name}_z"],
+                ]
             )
             corrected_position = correction_rot_matrix @ position
             row[f"{body_name}_x"] = corrected_position[0]
             row[f"{body_name}_y"] = corrected_position[1]
             row[f"{body_name}_z"] = corrected_position[2]
         return row
-    
+
     df_transformed = df.apply(transform_row, axis=1)
     return df_transformed
 
@@ -446,11 +454,11 @@ def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
     initial_steer_angle = df["hebi_steer_pos"].iloc[0]
     final_steer_angle = df["hebi_steer_pos"].iloc[-1]
 
-    heading0_R_body0 = R.from_euler("z", initial_steer_angle/2).as_matrix()
+    heading0_R_body0 = R.from_euler("z", initial_steer_angle / 2).as_matrix()
     heading0_H_body0 = np.eye(4)
     heading0_H_body0[:3, :3] = heading0_R_body0
 
-    headingf_R_bodyf = R.from_euler("z", final_steer_angle/2).as_matrix()
+    headingf_R_bodyf = R.from_euler("z", final_steer_angle / 2).as_matrix()
     headingf_H_bodyf = np.eye(4)
     headingf_H_bodyf[:3, :3] = headingf_R_bodyf
 
@@ -469,7 +477,7 @@ def calculate_transition_pose_change(df: pd.DataFrame) -> List[float]:
     world_H_bodyf[:3, :3] = world_R_bodyf
     world_H_bodyf[:3, -1] = world_T_bodyf
 
-    #compute change the final and initial poses in the heading frame
+    # compute change the final and initial poses in the heading frame
     world_H_heading0 = world_H_body0 @ np.linalg.inv(heading0_H_body0)
     world_H_headingf = world_H_bodyf @ np.linalg.inv(headingf_H_bodyf)
 
@@ -493,7 +501,6 @@ def summarize_pose_changes(df: pd.DataFrame) -> List[List[float]]:
 def plot_pose_changes(
     df: pd.DataFrame, title: str, show_transitions: bool = True
 ) -> Figure:
-
     def add_orientation(row):
         quaternion_front = [
             row[f"{BODY_OBJECT_NAME}_q1"],
@@ -524,14 +531,18 @@ def plot_pose_changes(
             row[f"{BOGIE_OBJECT_NAME}_yaw"],
         ) = back_rotation
 
-        row[f"{BODY_OBJECT_NAME}_heading"] = (row[f"{BODY_OBJECT_NAME}_yaw"] + row[f"{BOGIE_OBJECT_NAME}_yaw"]) / 2
+        row[f"{BODY_OBJECT_NAME}_heading"] = (
+            row[f"{BODY_OBJECT_NAME}_yaw"] + row[f"{BOGIE_OBJECT_NAME}_yaw"]
+        ) / 2
 
         return row
 
     df = df.apply(add_orientation, axis=1)
 
     # Create a new figure and three subplots
-    fig, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(4, 2, sharex=True)
+    fig, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(
+        4, 2, sharex=True
+    )
     if matplotlib.rcParams["text.usetex"]:
         fig.suptitle(
             r"\Large{\textbf{Pose Changes - Body}}" "\n" r"\small{" + title + "}"
@@ -646,7 +657,9 @@ def plot_pose_changes(
                 )
                 ax6.plot(
                     gait["time"],
-                    gait[f"{BOGIE_OBJECT_NAME}_pitch"].astype(float).apply(math.degrees),
+                    gait[f"{BOGIE_OBJECT_NAME}_pitch"]
+                    .astype(float)
+                    .apply(math.degrees),
                     color=gait_colors[gait["gait_name"].iloc[0]]["body"],
                 )
                 ax3.plot(
@@ -705,9 +718,7 @@ def plot_hebi_steer_pos(df: pd.DataFrame) -> Figure:
     for transition in transitions:
         ax.plot(
             transition["time"],
-            transition[f"hebi_steer_pos"]
-            .astype(float)
-            .apply(math.degrees),
+            transition[f"hebi_steer_pos"].astype(float).apply(math.degrees),
             color="red",
         )
     return fig

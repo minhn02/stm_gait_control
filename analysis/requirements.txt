@@ -2,5 +2,6 @@ matplotlib
 numpy
 pandas
 rich
+scikit-learn
 scipy
 transforms3d
