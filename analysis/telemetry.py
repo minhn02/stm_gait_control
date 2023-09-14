@@ -22,14 +22,14 @@ def calculate_power_consumption(df: pd.DataFrame) -> float:
     wheel_power = 0
     for i in range(1, 5):
         wheel_power += (
-            df[f"wheel{i}_vol"].multiply(df[f"wheel{i}_cur"]).abs().sum() / 100
+            df[f"wheel{i}_current"].multiply(df[f"wheel{i}_velocity"]).apply(lambda x: x*1.45).abs().sum()
         )
 
     # calculate hebi power
     hebi_power = 0
     for name in hebi_names:
         hebi_power += (
-            df[f"hebi_{name}_vol"].multiply(df[f"hebi_{name}_cur_motor"]).abs().sum()
+            df[f"hebi_{name}_eff"].multiply(df[f"hebi_{name}_vel"]).abs().sum()
         )
 
     return wheel_power + hebi_power
