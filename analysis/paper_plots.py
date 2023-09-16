@@ -7,6 +7,7 @@ from matplotlib.figure import Figure
 
 REPO_ROOT = Path(__file__).parent.parent
 RESULTS_PATH = REPO_ROOT / "results"
+PLOTS_PATH = REPO_ROOT / "plots"
 
 transition_names = [
     "bezier-balanced",
@@ -28,6 +29,7 @@ def plot_duration(transition_data: dict[str, pd.DataFrame]) -> Figure:
     metric_name = "duration_s"
     ax.set_title("Duration of Gait Transitions")
     ax.set_ylabel("Duration (s)")
+    ax.yaxis.set_major_formatter("{x:.1f}")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
     plt.subplots_adjust(bottom=0.3)
@@ -56,6 +58,7 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
     metric_name = "heading_change_rad"
     ax.set_title("Heading Change of Gait Transitions")
     ax.set_ylabel("Heading Change (deg)")
+    ax.yaxis.set_major_formatter("{x:.1f}")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
     plt.subplots_adjust(bottom=0.3)
@@ -84,6 +87,7 @@ def plot_cot(transition_data: dict[str, pd.DataFrame]) -> Figure:
     metric_name = "cost_of_transport"
     ax.set_title("Cost of Transport for Gait Transitions")
     ax.set_ylabel("Cost of Transport [E/mgd]")
+    ax.yaxis.set_major_formatter("{x:.1f}")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
     plt.subplots_adjust(bottom=0.3)
@@ -121,3 +125,11 @@ if __name__ == "__main__":
     heading_fig = plot_heading(transition_data)
     power_fig = plot_cot(transition_data)
     plt.show()
+
+    # if PLOTS_PATH does not exist, make a folder
+    if not PLOTS_PATH.exists():
+        PLOTS_PATH.mkdir()
+
+    duration_fig.savefig(PLOTS_PATH / "gaits_duration.png", dpi=300)
+    heading_fig.savefig(PLOTS_PATH / "gaits_heading.png", dpi=300)
+    power_fig.savefig(PLOTS_PATH / "gaits_cot.png", dpi=300)
