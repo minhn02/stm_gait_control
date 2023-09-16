@@ -777,3 +777,9 @@ def calc_transition_pos_change_xyz(df: pd.DataFrame) -> Tuple[float, float, floa
         ]
     )
     return tuple(final_pos - initial_pos)
+
+
+def calc_heading_change(df: pd.DataFrame) -> float:
+    # TODO: Validate this (unsure if dyaw is the relevant metric)
+    dx, dy, dz, droll, dpitch, dyaw = calculate_transition_pose_change(df)
+    return dyaw
