@@ -54,8 +54,8 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
     fig, ax = plt.subplots()
 
     metric_name = "heading_change_rad"
-    ax.set_title("Change of Heading over Gait Transitions")
-    ax.set_ylabel("Heading Change (rad)")
+    ax.set_title("Heading Change of Gait Transitions")
+    ax.set_ylabel("Heading Change (deg)")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
     plt.subplots_adjust(bottom=0.3)
@@ -68,8 +68,8 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
 
     ax.bar(
         x=transition_names,
-        height=means,
-        yerr=stds,
+        height=np.degrees(means),
+        yerr=np.degrees(stds),
         capsize=5,
         edgecolor="black",
         width=0.5,

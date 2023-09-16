@@ -781,9 +781,50 @@ def calc_transition_pos_change_xyz(df: pd.DataFrame) -> Tuple[float, float, floa
 
 
 def calc_heading_change(df: pd.DataFrame) -> float:
-    # TODO: Validate this (unsure if dyaw is the relevant metric)
-    dx, dy, dz, droll, dpitch, dyaw = calculate_transition_pose_change(df)
-    return dyaw
+    # Find the initial heading of the rover as the average of the two bodies
+    body_initial_quaternion = [
+        df[f"{BODY_OBJECT_NAME}_q1"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q2"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q3"].iloc[0],
+        df[f"{BODY_OBJECT_NAME}_q4"].iloc[0],
+    ]
+    body_initial_orientation = R.from_quat(body_initial_quaternion).as_euler("xyz")
+    body_initial_heading_rad = body_initial_orientation[2]
+
+    bogie_initial_quaternion = [
+        df[f"{BOGIE_OBJECT_NAME}_q1"].iloc[0],
+        df[f"{BOGIE_OBJECT_NAME}_q2"].iloc[0],
+        df[f"{BOGIE_OBJECT_NAME}_q3"].iloc[0],
+        df[f"{BOGIE_OBJECT_NAME}_q4"].iloc[0],
+    ]
+    bogie_initial_orientation = R.from_quat(bogie_initial_quaternion).as_euler("xyz")
+    bogie_initial_heading_rad = bogie_initial_orientation[2]
+
+    initial_heading_rad = (body_initial_heading_rad + bogie_initial_heading_rad) / 2
+
+    # Find the final heading of the rover as the average of the two bodies
+    body_final_quaternion = [
+        df[f"{BODY_OBJECT_NAME}_q1"].iloc[-1],
+        df[f"{BODY_OBJECT_NAME}_q2"].iloc[-1],
+        df[f"{BODY_OBJECT_NAME}_q3"].iloc[-1],
+        df[f"{BODY_OBJECT_NAME}_q4"].iloc[-1],
+    ]
+    body_final_orientation = R.from_quat(body_final_quaternion).as_euler("xyz")
+    body_final_heading = body_final_orientation[2]
+
+    bogie_final_quaternion = [
+        df[f"{BOGIE_OBJECT_NAME}_q1"].iloc[-1],
+        df[f"{BOGIE_OBJECT_NAME}_q2"].iloc[-1],
+        df[f"{BOGIE_OBJECT_NAME}_q3"].iloc[-1],
+        df[f"{BOGIE_OBJECT_NAME}_q4"].iloc[-1],
+    ]
+    bogie_final_orientation = R.from_quat(bogie_final_quaternion).as_euler("xyz")
+    bogie_final_heading_rad = bogie_final_orientation[2]
+
+    final_heading_rad = (body_final_heading + bogie_final_heading_rad) / 2
+
+    heading_change_rad = abs(final_heading_rad - initial_heading_rad)
+    return heading_change_rad
 
 
 def calc_cost_of_transport(df: pd.DataFrame) -> float:
