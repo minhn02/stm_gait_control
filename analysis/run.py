@@ -30,7 +30,7 @@ TELEM_EXAMPLE_PATH = LOGPAIR_EXAMPLE_PATH_BASE.with_suffix(".csv")
 # Enum for each type of analysis
 ANALYSIS_TYPE = Enum("ANALYSIS_TYPE", "LOG_PAIR DIR_SUMMARY ALL_SUMMARIES")
 
-DEFAULT_ANALYSIS = ANALYSIS_TYPE.LOG_PAIR
+DEFAULT_ANALYSIS = ANALYSIS_TYPE.ALL_SUMMARIES
 
 # offset vicon time in 8-5 data due to improper epoch synching (keys are regex patterns)
 VICON_OFFSETS = {
@@ -110,9 +110,10 @@ def summarise_runs(dir_path: Path, results_dir_path: Path):
         Metric("duration_s", analysis.calc_transition_duration),
         Metric("power_wheels_W", analysis.calc_transition_power_wheels),
         Metric("power_hebis_W", analysis.calc_transition_power_hebis),
-        Metric("power_W", telemetry.calculate_power_consumption),
+        Metric("total_energy_J", telemetry.calculate_energy_consumption),
         Metric("pos_change_xyz_m", analysis.calc_transition_pos_change_xyz),
         Metric("heading_change_rad", analysis.calc_heading_change),
+        Metric("cost_of_transport", analysis.calc_cost_of_transport),
     ]
 
     for transformed_df in transformed_dfs:

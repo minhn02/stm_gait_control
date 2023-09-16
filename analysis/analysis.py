@@ -8,6 +8,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import telemetry
 from matplotlib.figure import Figure
 from scipy import integrate
 from scipy.spatial.transform import Rotation as R
@@ -783,3 +784,12 @@ def calc_heading_change(df: pd.DataFrame) -> float:
     # TODO: Validate this (unsure if dyaw is the relevant metric)
     dx, dy, dz, droll, dpitch, dyaw = calculate_transition_pose_change(df)
     return dyaw
+
+
+def calc_cost_of_transport(df: pd.DataFrame) -> float:
+    energy_J = telemetry.calculate_energy_consumption(df)
+    mass_kg = 7.8
+    g = 9.81
+    pos_change = calc_transition_pos_change_xyz(df)
+    planar_dist_m = math.sqrt(pos_change[0] ** 2 + pos_change[1] ** 2)
+    return energy_J / (mass_kg * g * planar_dist_m)

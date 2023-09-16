@@ -35,6 +35,9 @@ def plot_duration(transition_data: dict[str, pd.DataFrame]) -> Figure:
     means = [df.loc[metric_name]["mean"] for df in transition_data.values()]
     stds = [df.loc[metric_name]["std"] for df in transition_data.values()]
 
+    # Create a lower bound on the errors at 0
+    stds = [np.minimum(stds, means), stds]
+
     ax.bar(
         x=transition_names,
         height=means,
@@ -61,7 +64,7 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
     stds = [df.loc[metric_name]["std"] for df in transition_data.values()]
 
     # Create a lower bound on the errors at 0
-    stds = np.array([min(stds, means), stds])
+    stds = [np.minimum(stds, means), stds]
 
     ax.bar(
         x=transition_names,
@@ -75,18 +78,21 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
     return fig
 
 
-def plot_power(transition_data: dict[str, pd.DataFrame]) -> Figure:
+def plot_cot(transition_data: dict[str, pd.DataFrame]) -> Figure:
     fig, ax = plt.subplots()
 
-    metric_name = "power_wheels_W"
+    metric_name = "cost_of_transport"
     ax.set_title("Cost of Transport for Gait Transitions")
-    ax.set_ylabel("Average Wheel Power (W)")
+    ax.set_ylabel("Cost of Transport [E/mgd]")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
     plt.subplots_adjust(bottom=0.3)
 
     means = [df.loc[metric_name]["mean"] for df in transition_data.values()]
     stds = [df.loc[metric_name]["std"] for df in transition_data.values()]
+
+    # Create a lower bound on the errors at 0
+    stds = [np.minimum(stds, means), stds]
 
     ax.bar(
         x=transition_names,
@@ -113,5 +119,5 @@ if __name__ == "__main__":
 
     duration_fig = plot_duration(transition_data)
     heading_fig = plot_heading(transition_data)
-    power_fig = plot_power(transition_data)
+    power_fig = plot_cot(transition_data)
     plt.show()
