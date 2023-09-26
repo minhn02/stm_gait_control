@@ -114,6 +114,8 @@ def summarise_runs(dir_path: Path, results_dir_path: Path):
         Metric("pos_change_xyz_m", analysis.calc_transition_pos_change_xyz),
         Metric("heading_change_rad", analysis.calc_heading_change),
         Metric("cost_of_transport", analysis.calc_cost_of_transport),
+        Metric("max_accel_steer_radps2", analysis.calc_max_accel_steer),
+        Metric("max_accel_bogie_radps2", analysis.calc_max_accel_bogie),
     ]
 
     for transformed_df in transformed_dfs:

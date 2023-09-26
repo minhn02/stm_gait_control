@@ -834,3 +834,27 @@ def calc_cost_of_transport(df: pd.DataFrame) -> float:
     pos_change = calc_transition_pos_change_xyz(df)
     planar_dist_m = math.sqrt(pos_change[0] ** 2 + pos_change[1] ** 2)
     return energy_J / (mass_kg * g * planar_dist_m)
+
+
+def calc_max_accel_steer(df: pd.DataFrame) -> float:
+    velocities = df["hebi_steer_vel"].astype(float)
+    max_accel = 0
+    for i in range(len(velocities) - 1):
+        accel = abs(velocities.iloc[i + 1] - velocities.iloc[i]) / (
+            df["time"].iloc[i + 1] - df["time"].iloc[i]
+        )
+        if accel > max_accel:
+            max_accel = accel
+    return max_accel
+
+
+def calc_max_accel_bogie(df: pd.DataFrame) -> float:
+    velocities = df["hebi_bogie_vel"].astype(float)
+    max_accel = 0
+    for i in range(len(velocities) - 1):
+        accel = abs(velocities.iloc[i + 1] - velocities.iloc[i]) / (
+            df["time"].iloc[i + 1] - df["time"].iloc[i]
+        )
+        if accel > max_accel:
+            max_accel = accel
+    return max_accel

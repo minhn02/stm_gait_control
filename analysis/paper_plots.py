@@ -40,6 +40,10 @@ spline_color = "#7a5195"
 linear_color = "#ef5675"
 naive_color = "#ffa600"
 
+bezier_color2 = "#c2e7ff"
+spline_color2 = "#f1dbfe"
+linear_color2 = "#ffd5da"
+naive_color2 = "#fbddbe"
 
 bar_colors = [
     bezier_color,
@@ -52,6 +56,19 @@ bar_colors = [
     linear_color,
     linear_color,
     naive_color,
+]
+
+secondary_bar_colors = [
+    bezier_color2,
+    bezier_color2,
+    bezier_color2,
+    spline_color2,
+    spline_color2,
+    spline_color2,
+    linear_color2,
+    linear_color2,
+    linear_color2,
+    naive_color2,
 ]
 
 
@@ -145,6 +162,50 @@ def plot_cot(transition_data: dict[str, pd.DataFrame]) -> Figure:
     return fig
 
 
+def plot_max_joint_accel(transition_data: dict[str, pd.DataFrame]) -> Figure:
+    fig, ax = plt.subplots()
+
+    metric_name1 = "max_accel_steer_radps2"
+    metric_name2 = "max_accel_bogie_radps2"
+    ax.set_title("Maximum Joint Accelerations")
+    ax.set_ylabel("Max Joint Acceleration [rad/s$^2$]")
+    ax.yaxis.set_major_formatter("{x:.1f}")
+    ax.xaxis.set_tick_params(rotation=45)
+    plt.xticks(ha="right")
+    plt.subplots_adjust(bottom=0.3)
+
+    means1 = [df.loc[metric_name1]["mean"] for df in transition_data.values()]
+    means2 = [df.loc[metric_name2]["mean"] for df in transition_data.values()]
+
+    x_axis = np.arange(len(label_names))
+
+    ax.bar(
+        x=x_axis - 0.15,
+        height=means1,
+        # yerr=stds,
+        capsize=5,
+        edgecolor="black",
+        width=0.3,
+        color=bar_colors,
+        label="Steering Joint",
+    )
+    ax.bar(
+        x=x_axis + 0.15,
+        height=means2,
+        # yerr=stds,
+        capsize=5,
+        edgecolor="black",
+        width=0.3,
+        color=secondary_bar_colors,
+        label="Bogie Joint",
+    )
+
+    plt.xticks(x_axis, label_names)
+    plt.legend()
+
+    return fig
+
+
 if __name__ == "__main__":
     summary_source_files = {
         transition_name: RESULTS_PATH / f"8-5-{transition_name}_summary.csv"
@@ -159,6 +220,7 @@ if __name__ == "__main__":
     duration_fig = plot_duration(transition_data)
     heading_fig = plot_heading(transition_data)
     power_fig = plot_cot(transition_data)
+    joint_accel_fig = plot_max_joint_accel(transition_data)
     plt.show()
 
     # if PLOTS_PATH does not exist, make a folder
@@ -168,3 +230,4 @@ if __name__ == "__main__":
     duration_fig.savefig(PLOTS_PATH / "gaits_duration.png", dpi=300)
     heading_fig.savefig(PLOTS_PATH / "gaits_heading.png", dpi=300)
     power_fig.savefig(PLOTS_PATH / "gaits_cot.png", dpi=300)
+    joint_accel_fig.savefig(PLOTS_PATH / "gaits_joint_accel.png", dpi=300)
