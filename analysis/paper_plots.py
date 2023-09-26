@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -8,6 +9,9 @@ from matplotlib.figure import Figure
 REPO_ROOT = Path(__file__).parent.parent
 RESULTS_PATH = REPO_ROOT / "results"
 PLOTS_PATH = REPO_ROOT / "plots"
+
+matplotlib.rc("text", usetex=True)
+matplotlib.rc("font", family="serif", size=10)
 
 transition_names = [
     "bezier-balanced",
@@ -73,7 +77,7 @@ secondary_bar_colors = [
 
 
 def plot_duration(transition_data: dict[str, pd.DataFrame]) -> Figure:
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=300)
 
     metric_name = "duration_s"
     ax.set_title("Duration of Gait Transitions")
@@ -103,7 +107,7 @@ def plot_duration(transition_data: dict[str, pd.DataFrame]) -> Figure:
 
 
 def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=300)
 
     metric_name = "heading_change_rad"
     ax.set_title("Heading Change of Gait Transitions")
@@ -133,11 +137,11 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
 
 
 def plot_cot(transition_data: dict[str, pd.DataFrame]) -> Figure:
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=300)
 
     metric_name = "cost_of_transport"
     ax.set_title("Cost of Transport for Gait Transitions")
-    ax.set_ylabel("Cost of Transport [E/mgd]")
+    ax.set_ylabel("Cost of Transport [$E/mgd$]")
     ax.yaxis.set_major_formatter("{x:.1f}")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
@@ -163,12 +167,12 @@ def plot_cot(transition_data: dict[str, pd.DataFrame]) -> Figure:
 
 
 def plot_max_joint_accel(transition_data: dict[str, pd.DataFrame]) -> Figure:
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=300)
 
     metric_name1 = "max_accel_steer_radps2"
     metric_name2 = "max_accel_bogie_radps2"
     ax.set_title("Maximum Joint Accelerations")
-    ax.set_ylabel("Max Joint Acceleration [rad/s$^2$]")
+    ax.set_ylabel("Max Joint Acceleration (rad/s$^2$)")
     ax.yaxis.set_major_formatter("{x:.1f}")
     ax.xaxis.set_tick_params(rotation=45)
     plt.xticks(ha="right")
@@ -227,7 +231,7 @@ if __name__ == "__main__":
     if not PLOTS_PATH.exists():
         PLOTS_PATH.mkdir()
 
-    duration_fig.savefig(PLOTS_PATH / "gaits_duration.png", dpi=300)
-    heading_fig.savefig(PLOTS_PATH / "gaits_heading.png", dpi=300)
-    power_fig.savefig(PLOTS_PATH / "gaits_cot.png", dpi=300)
-    joint_accel_fig.savefig(PLOTS_PATH / "gaits_joint_accel.png", dpi=300)
+    duration_fig.savefig(PLOTS_PATH / "gaits_duration.pdf", dpi=300)
+    heading_fig.savefig(PLOTS_PATH / "gaits_heading.pdf", dpi=300)
+    power_fig.savefig(PLOTS_PATH / "gaits_cot.pdf", dpi=300)
+    joint_accel_fig.savefig(PLOTS_PATH / "gaits_joint_accel.pdf", dpi=300)
