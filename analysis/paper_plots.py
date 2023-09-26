@@ -22,6 +22,38 @@ transition_names = [
     "naive-balanced",
 ]
 
+label_names = [
+    "bezier-balanced",
+    "bezier-heading",
+    "bezier-time",
+    "spline-balanced",
+    "spline-heading",
+    "spline-time",
+    "linear-balanced",
+    "linear-heading",
+    "linear-time",
+    "naive-balanced",
+]
+
+bezier_color = "#003f5c"
+spline_color = "#7a5195"
+linear_color = "#ef5675"
+naive_color = "#ffa600"
+
+
+bar_colors = [
+    bezier_color,
+    bezier_color,
+    bezier_color,
+    spline_color,
+    spline_color,
+    spline_color,
+    linear_color,
+    linear_color,
+    linear_color,
+    naive_color,
+]
+
 
 def plot_duration(transition_data: dict[str, pd.DataFrame]) -> Figure:
     fig, ax = plt.subplots()
@@ -41,12 +73,13 @@ def plot_duration(transition_data: dict[str, pd.DataFrame]) -> Figure:
     stds = [np.minimum(stds, means), stds]
 
     ax.bar(
-        x=transition_names,
+        x=label_names,
         height=means,
-        yerr=stds,
+        # yerr=stds,
         capsize=5,
         edgecolor="black",
         width=0.5,
+        color=bar_colors,
     )
 
     return fig
@@ -70,12 +103,13 @@ def plot_heading(transition_data: dict[str, pd.DataFrame]) -> Figure:
     stds = [np.minimum(stds, means), stds]
 
     ax.bar(
-        x=transition_names,
+        x=label_names,
         height=np.degrees(means),
-        yerr=np.degrees(stds),
+        # yerr=np.degrees(stds),
         capsize=5,
         edgecolor="black",
         width=0.5,
+        color=bar_colors,
     )
 
     return fig
@@ -99,12 +133,13 @@ def plot_cot(transition_data: dict[str, pd.DataFrame]) -> Figure:
     stds = [np.minimum(stds, means), stds]
 
     ax.bar(
-        x=transition_names,
+        x=label_names,
         height=means,
-        yerr=stds,
+        # yerr=stds,
         capsize=5,
         edgecolor="black",
         width=0.5,
+        color=bar_colors,
     )
 
     return fig
