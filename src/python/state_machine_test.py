@@ -34,7 +34,7 @@ control_period = 0.02 #seconds
 
 gait_names = ["IDLE", "SQUIRM", "WHEEL_WALKING", "TRANSITION", "STARTUP", "INITIAL"]
 
-send_command(4)
+send_command(6)
 
 while True:
     start_time = time.time_ns()
