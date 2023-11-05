@@ -5,6 +5,14 @@ using namespace Eigen;
 
 namespace TransitionGenerator {
 
+    /**********************************/
+    /* Bezier Weights for Experiments */
+    /**********************************/
+    double acceleration_weight = 5;
+    double duration_weight = 4;
+    double deviation_weight = 1;
+    /**********************************/
+
     struct OptData {
         Gait::Gait *gait1;
         Gait::Gait *gait2;
@@ -64,12 +72,15 @@ namespace TransitionGenerator {
         std::vector<VectorXd> points = {P0, P1, P2, P3};
         Bezier::Curve<int64_t> curve(points, (int64_t)(x[0]) - t1, t1);
 
-        // add velocity cost for uniformly sampled points over curve
-        double avgVel = 0;
-        int n_steps = 50;
-        int64_t time_delta = (int64_t)((x[0]) - t1)/(n_steps-1);
-        for (int i = 0; i < n_steps; i++) {
-            avgVel += curve.dEvaluate(i*time_delta).norm()/1e9;
+        // penalize acceleration
+        double acceleration_penalty = 0;
+        double n_steps = 20;
+        double time_delta = (double)duration/n_steps;
+        double time_delta_s = time_delta / (1e9);
+        for (int i = 0; i < n_steps - 1; i++) {
+            acceleration_penalty += std::abs(curve.evaluate(t1 + (i+1)*time_delta)(0) - curve.evaluate(t1 + i*time_delta)(0)) / std::pow(time_delta_s, 2);
+
+            acceleration_penalty += std::abs(curve.evaluate(t1 + (i+1)*time_delta)(1) - curve.evaluate(t1 + i*time_delta)(1)) / std::pow(time_delta_s, 2);
         }
 
         // add duration cost for transition time
@@ -92,9 +103,11 @@ namespace TransitionGenerator {
         Vector3d closest_point = RoverTrajectory::find_closest_waypoint(trajectory_displacement_vec, gait2_coordinate);
         double cartesian_trajectory_diff = (closest_point - trajectory_displacement_vec).norm();
 
-        std::cout << "cartesian trajectory diff: " << cartesian_trajectory_diff << "avgVel: " << avgVel << ", duration_cost: " << duration_cost << std::endl;
+        std::cout << "cartesian trajectory diff: " << deviation_weight * cartesian_trajectory_diff << " acceleration penalty: " << acceleration_weight * acceleration_penalty << ", duration_cost: " << duration_weight * duration_cost << std::endl;
 
-        return avgVel + duration_cost + 20*cartesian_trajectory_diff;
+        return acceleration_weight * acceleration_penalty 
+            + duration_weight * duration_cost 
+            + deviation_weight * cartesian_trajectory_diff;
     }
 
     Bezier::Curve<int64_t> findOptimalCubicCurve(Gait::Gait *gait1, Gait::Gait *gait2, std::chrono::nanoseconds startTime, std::chrono::nanoseconds t1, std::chrono::nanoseconds *t_t, std::chrono::nanoseconds *t_2) {
@@ -259,15 +272,15 @@ namespace TransitionGenerator {
         Vector3d trajectory_displacement_vec; trajectory_displacement_vec << trajectory_displacement[0], trajectory_displacement[1], trajectory_displacement[2];
         Vector3d closest_point = RoverTrajectory::find_closest_waypoint(trajectory_displacement_vec, gait2_coordinate);
 
-        std::cout << "trajectory displacement: [" << trajectory_displacement[0] << ", " << trajectory_displacement[1] << ", " << trajectory_displacement[2] << "]" << std::endl;
-        std::cout << "g2 displacement: [" << gait2_coordinate[0] << ", " << gait2_coordinate[1] << ", " << gait2_coordinate[2] << "]" << std::endl;
-        std::cout << "closest_point: [" << closest_point[0] << ", " << closest_point[1] << ", " << closest_point[2] << "]" << std::endl;
+        // std::cout << "trajectory displacement: [" << trajectory_displacement[0] << ", " << trajectory_displacement[1] << ", " << trajectory_displacement[2] << "]" << std::endl;
+        // std::cout << "g2 displacement: [" << gait2_coordinate[0] << ", " << gait2_coordinate[1] << ", " << gait2_coordinate[2] << "]" << std::endl;
+        // std::cout << "closest_point: [" << closest_point[0] << ", " << closest_point[1] << ", " << closest_point[2] << "]" << std::endl;
 
         double cartesian_trajectory_diff = (closest_point - trajectory_displacement_vec).norm();
 
-        std::cout << "final_diff: " << final_diff << " cartesian_trajectory_diff: " << cartesian_trajectory_diff << " bezier traj diff: " << bezier_traj_penalty << " acceleration penalty: " << acceleration_penalty << " time penalty: " << time_penalty << std::endl;
+        std::cout << "final_diff: " << 200*final_diff << " cartesian_trajectory_diff: " << 1*cartesian_trajectory_diff << " bezier traj diff: " << bezier_traj_penalty << " acceleration penalty: " << 5*acceleration_penalty << " time penalty: " << 4*time_penalty << std::endl;
         
-        obj_value = 200*final_diff + bezier_traj_penalty + 5*acceleration_penalty + 4*time_penalty + 20*cartesian_trajectory_diff;
+        obj_value = 200*final_diff + bezier_traj_penalty + 5*acceleration_penalty + 4*time_penalty + 1*cartesian_trajectory_diff;
 
         return obj_value;
     }
@@ -338,15 +351,15 @@ namespace TransitionGenerator {
         Vector3d trajectory_displacement_vec; trajectory_displacement_vec << trajectory_displacement[0], trajectory_displacement[1], trajectory_displacement[2];
         Vector3d closest_point = RoverTrajectory::find_closest_waypoint(trajectory_displacement_vec, gait2_coordinate);
 
-        std::cout << "trajectory displacement: [" << trajectory_displacement[0] << ", " << trajectory_displacement[1] << ", " << trajectory_displacement[2] << "]" << std::endl;
-        std::cout << "g2 displacement: [" << gait2_coordinate[0] << ", " << gait2_coordinate[1] << ", " << gait2_coordinate[2] << "]" << std::endl;
-        std::cout << "closest_point: [" << closest_point[0] << ", " << closest_point[1] << ", " << closest_point[2] << "]" << std::endl;
+        // std::cout << "trajectory displacement: [" << trajectory_displacement[0] << ", " << trajectory_displacement[1] << ", " << trajectory_displacement[2] << "]" << std::endl;
+        // std::cout << "g2 displacement: [" << gait2_coordinate[0] << ", " << gait2_coordinate[1] << ", " << gait2_coordinate[2] << "]" << std::endl;
+        // std::cout << "closest_point: [" << closest_point[0] << ", " << closest_point[1] << ", " << closest_point[2] << "]" << std::endl;
 
         double cartesian_trajectory_diff = (closest_point - trajectory_displacement_vec).norm();
 
-        std::cout << "final_diff: " << 200*final_diff << " cartesian_trajectory_diff: " << cartesian_trajectory_diff << " linear traj diff: " << linear_traj_diff << " acceleration penalty: " << 5*acceleration_penalty << " time penalty: " << 4*time_penalty << std::endl;
+        std::cout << "final_diff: " << 200*final_diff << " cartesian_trajectory_diff: " << 1*cartesian_trajectory_diff << " linear diff: " << linear_traj_diff << " acceleration penalty: " << 5*acceleration_penalty << " time penalty: " << 4*time_penalty << std::endl;
         
-        obj_value = 200*final_diff + linear_traj_diff + 5*acceleration_penalty + 4*time_penalty + 20*cartesian_trajectory_diff;
+        obj_value = 200*final_diff + linear_traj_diff + 5*acceleration_penalty + 4*time_penalty + 1*cartesian_trajectory_diff;
 
         return obj_value;
     }
